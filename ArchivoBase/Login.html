@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23b45f2b' d='M64 384l192-256 192 256H64zm256-128l64 96H128l64-96 96 128 96-128z'/%3E%3C/svg%3E">
+    <title>CARPINTEC - Acceso</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="authPage" class="auth-page">
+        <div id="authOverlay" class="auth-overlay"></div>
+        <div class="auth-card" id="authCard">
+            <!-- Pantalla de selección de rol -->
+            <div id="roleScreen" class="screen active">
+                <h2>🌲 CARPINTEC</h2>
+                <p class="sub">Artesanía en madera para tu hogar</p>
+                <button id="selectUserBtn" class="btn-primary" style="background:#b45f2b;">Ingresar como Usuario</button>
+                <button id="selectAdminBtn" class="btn-primary" style="background:#1e3a5f; margin-top:12px;">Ingresar como Administrador</button>
+            </div>
+
+            <!-- Pantalla de Login -->
+            <div id="loginScreen" class="screen">
+                <h2 id="loginTitle">Iniciar sesión</h2>
+                <p class="sub" id="loginSub">Accede a tu cuenta</p>
+                <div id="loginFormContainer"></div>
+                <div class="flex-between">
+                    <button id="backToRoleFromLogin" class="back-link">← Volver</button>
+                    <div>
+                        <button id="goToRegister" class="back-link">¿No tienes cuenta? Regístrate</button>
+                        <button id="goToRecover" class="back-link" style="margin-left:12px;">¿Olvidaste tu contraseña?</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pantalla de Registro -->
+            <div id="registerScreen" class="screen">
+                <h2 id="registerTitle">Registro</h2>
+                <p class="sub" id="registerSub">Crea una nueva cuenta</p>
+                <div id="registerFormContainer"></div>
+                <div class="flex-between">
+                    <button id="backToLoginFromRegister" class="back-link">← Volver al inicio de sesión</button>
+                    <button id="backToRoleFromRegister" class="back-link">Cambiar rol</button>
+                </div>
+            </div>
+
+            <!-- Pantalla de Recuperación -->
+            <div id="recoverScreen" class="screen">
+                <h2 id="recoverTitle">Recuperar contraseña</h2>
+                <p class="sub" id="recoverSub">Te ayudaremos a recuperar el acceso</p>
+                <div id="recoverFormContainer"></div>
+                <div class="flex-between">
+                    <button id="backToLoginFromRecover" class="back-link">← Volver al inicio</button>
+                    <button id="backToRoleFromRecover" class="back-link">Cambiar rol</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

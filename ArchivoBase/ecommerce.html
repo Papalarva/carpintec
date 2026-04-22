@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARPINTEC - Tienda de Carpintería</title>
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23b45f2b' d='M64 384l192-256 192 256H64zm256-128l64 96H128l64-96 96 128 96-128z'/%3E%3C/svg%3E">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="ecommerceApp" class="ecommerce-app">
+        <div class="app">
+            <div class="tabbar">
+                <div class="logo-area">
+                    <i class="fas fa-tree"></i>
+                    <span>CARPINTEC</span>
+                </div>
+                <div class="nav-links" id="navLinks">
+                    <a data-cat="inicio" class="active">Inicio</a>
+                    <a data-cat="sala">Sala</a>
+                    <a data-cat="cocina">Cocina</a>
+                    <a data-cat="comedor">Comedor</a>
+                    <a data-cat="recamara">Recámara</a>
+                    <a data-cat="baño">Baño</a>
+                </div>
+                <div class="user-actions">
+                    <i class="fas fa-shopping-cart cart-icon" id="cartIcon">
+                        <span class="cart-count" id="cartCount">0</span>
+                    </i>
+                    <i class="fas fa-bell" id="notifIcon"></i>
+                    <i class="fas fa-user-circle" id="profileIcon"></i>
+                    <i class="fas fa-cog" id="adminPanelBtn" style="margin-left: 10px; cursor: pointer; display: none;"
+                        title="Panel de administración"></i>
+                    <i class="fas fa-sign-out-alt" id="logoutBtn" style="margin-left: 10px; cursor: pointer;"
+                        title="Cerrar sesión"></i>
+                </div>
+            </div>
+            <div id="mainContent">
+                <div class="carousel-section">
+                    <div class="slider-container" id="sliderContainer">
+                        <div class="slider-wrapper">
+                            <div class="slider" id="slider">
+                                <!-- Los slides se generan dinámicamente -->
+                            </div>
+                        </div>
+                        <div class="dots" id="dotsContainer"></div>
+                    </div>
+                </div>
+                <div class="suggestions">
+                    <div class="section-title">✨ Sugerencias para ti</div>
+                    <div class="products-grid" id="productsGrid"></div>
+                </div>
+            </div>
+            <!-- Botón flotante personalizado -->
+            <div id="fabCustom" class="fab-custom">
+                <i class="fas fa-pencil-alt"></i>
+            </div>
+            <button id="floatingHelpBtn" class="help-btn">
+                <i class="fas fa-question"></i>
+            </button>
+            <footer>
+                <p>🌲 Hecho con madera reciclada | Tu mueble rústico de confianza</p>
+                <small>Ayuda: contacto@maderaviva.com</small>
+            </footer>
+        </div>
+
+        <!-- Modal del carrito -->
+        <div id="cartModal" class="cart-modal">
+            <div class="cart-header">
+                <h3>Mi carrito</h3>
+                <button id="closeCartBtn" class="modal-close" style="position: static;">&times;</button>
+            </div>
+            <div id="cartItemsList" class="cart-items">
+                <div class="empty-cart">Tu carrito está vacío</div>
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total" id="cartTotal">Total: $0</div>
+                <button id="checkoutBtn" class="btn-checkout">Proceder al pago</button>
+            </div>
+        </div>
+        <!-- Modal de perfil de usuario -->
+        <div id="profileModal" class="modal-overlay">
+            <div class="product-modal" style="max-width: 450px;">
+                <button class="modal-close" id="closeProfileBtn">&times;</button>
+                <h2><i class="fas fa-user-circle"></i> Mi perfil</h2>
+                <div class="profile-form">
+                    <div class="input-group">
+                        <label>Correo electrónico</label>
+                        <input type="email" id="profileEmail" readonly disabled>
+                    </div>
+                    <div class="input-group">
+                        <label>Nombre de usuario</label>
+                        <input type="text" id="profileUsername">
+                    </div>
+                    <div class="input-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="profilePhone">
+                    </div>
+                    <button id="saveProfileBtn" class="btn-primary">Guardar cambios</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de producto -->
+        <div id="productModal" class="modal-overlay">
+            <div class="product-modal">
+                <button class="modal-close">&times;</button>
+                <div id="modalContent"></div>
+            </div>
+        </div>
+
+        <!-- Modal para pedido personalizado -->
+        <div id="customOrderModal" class="modal-overlay">
+            <div class="product-modal custom-order-modal">
+                <button class="modal-close" id="closeCustomModal">&times;</button>
+                <h2>📐 Solicitar mueble a medida</h2>
+                <form id="customOrderForm" class="custom-order-form">
+                    <textarea id="customDesc" placeholder="Descripción detallada (obligatorio)" rows="4"
+                        required></textarea>
+                    <input type="file" id="customImage" accept="image/*">
+                    <div id="imagePreview" class="image-preview"></div>
+                    <input type="number" id="customQty" placeholder="Cantidad" min="1" value="1" required>
+                    <input type="text" id="customMeasures" placeholder="Medidas (ej: 120x60x45 cm)">
+                    <input type="text" id="customMaterial" placeholder="Material preferido">
+                    <input type="number" id="customPrice" placeholder="Precio sugerido (opcional)" step="0.01">
+                    <button type="submit" class="btn-primary">Agregar al carrito</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Panel de administración -->
+        <div id="adminPanel" class="admin-panel">
+            <div class="admin-panel-content">
+                <button id="closeAdminPanel" class="modal-close"
+                    style="position: absolute; top: 16px; right: 20px;">&times;</button>
+                <h2>Panel de Administración</h2>
+                <div class="admin-tab">
+                    <button id="tabProducts" class="active">Productos</button>
+                    <button id="tabOrders">Pedidos</button>
+                </div>
+                <div id="adminProductsSection">
+                    <div class="admin-product-list" id="adminProductList"></div>
+                    <div class="admin-form">
+                        <h3>Agregar nuevo producto</h3>
+                        <input type="text" id="newProductName" placeholder="Nombre">
+                        <select id="newProductCategory">
+                            <option value="sala">Sala</option>
+                            <option value="cocina">Cocina</option>
+                            <option value="comedor">Comedor</option>
+                            <option value="recamara">Recámara</option>
+                            <option value="baño">Baño</option>
+                        </select>
+                        <input type="number" id="newProductPrice" placeholder="Precio">
+                        <input type="text" id="newProductImage" placeholder="URL de imagen">
+                        <input type="number" id="newProductStock" placeholder="Stock (cantidad disponible)" value="10">
+                        <textarea id="newProductDescription" placeholder="Descripción"></textarea>
+                        <button id="addProductBtn">Agregar producto</button>
+                    </div>
+                </div>
+                <div id="adminOrdersSection" style="display: none;">
+                    <div id="ordersList" class="orders-list"></div>
+                </div>
+            </div>
+        </div>
+        <!-- Modal de checkout / pago -->
+        <div id="checkoutModal" class="modal-overlay">
+            <div class="product-modal checkout-modal">
+                <button class="modal-close" id="closeCheckoutBtn">&times;</button>
+                <h2>Finalizar compra</h2>
+                <div id="checkoutSummary" class="checkout-summary"></div>
+                <h3>Método de pago</h3>
+                <div class="payment-methods">
+                    <div class="payment-method" data-method="card">💳 Tarjeta Debito/Credito</div>
+                    <div class="payment-method" data-method="paypal">📱 PayPal</div>
+                    <div class="payment-method" data-method="mercadopago">🟡 Otro</div>
+                </div>
+                <div id="paymentFormContainer" class="payment-form"></div>
+                <div class="address-fields">
+                    <label>Dirección de entrega:</label>
+                    <textarea id="deliveryAddress" rows="3"
+                        placeholder="Calle, número, colonia, ciudad, código postal">Calle Roble #123, Colonia Madera, Ciudad de México, CP 12345</textarea>
+                </div>
+                <button id="confirmPayBtn" class="btn-pay">Confirmar pago</button>
+            </div>
+        </div>
+
+        <!-- Modal de ayuda -->
+        <div id="helpModal" class="modal-overlay">
+            <div class="product-modal help-modal">
+                <button class="modal-close" id="closeHelpBtn">&times;</button>
+                <div class="help-content">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>¿Necesitas ayuda?</h3>
+                    <p>📞 Teléfono: +52 55 1234 5678</p>
+                    <p>✉️ Email: soporte@maderaviva.com</p>
+                    <p>💬 Chat en línea: disponible de 9am a 6pm</p>
+                    <hr>
+                    <p><strong>Preguntas frecuentes:</strong><br>
+                        - ¿Cómo personalizar un mueble? Usa el botón flotante "Pedido a medida".<br>
+                        - ¿Tiempo de entrega? De 5 a 15 días hábiles.<br>
+                        - ¿Garantía? 1 año en defectos de fabricación.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
