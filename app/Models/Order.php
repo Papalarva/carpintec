@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -62,5 +64,33 @@ class Order extends Model
             'total' => 'decimal:2',
             'status_id' => 'integer',
         ];
+    }
+
+    // ==========================================
+    // RELACIONES
+    // ==========================================
+
+    /**
+     * Relación N:1 — Cliente que realizó el pedido.
+     */
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    /**
+     * Relación 1:N — Ítems (líneas) del pedido.
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Relación N:1 — Dirección de envío usada por el pedido.
+     */
+    public function shippingAddress(): BelongsTo
+    {
+        return $this->belongsTo(Address::class, 'shipping_address_id');
     }
 }

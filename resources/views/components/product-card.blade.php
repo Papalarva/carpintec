@@ -1,32 +1,46 @@
-{{--
-    Componente Anónimo: Tarjeta de Producto
-    Uso: <x-product-card :product="$product" />
-
-    Props:
-      $product->id, $product->name, $product->price,
-      $product->category, $product->images (array/json),
-      $product->rating, $product->brand, $product->stock
---}}
-@props(['product'])
+@props([
+    'productName' => null,
+    'price' => null,
+    'imageUrl' => null,
+    'href' => null,
+    'product' => null,
+])
 
 @php
-    $images = is_array($product->images) ? $product->images : json_decode($product->images, true);
-    $firstImage = $images[0] ?? 'https://picsum.photos/id/158/400/300';
+    $resolvedProductName = $productName ?? $product?->name ?? 'Producto';
+    $resolvedPrice = $price ?? $product?->price ?? null;
+    $resolvedImageUrl = $imageUrl ?? null;
+    $resolvedHref = $href ?? null;
 @endphp
 
-<div class="product-card" data-id="{{ $product->id }}" role="button" tabindex="0"
-     aria-label="Ver {{ $product->name }}">
-    <img class="product-img"
-         src="{{ $firstImage }}"
-         alt="{{ $product->name }}"
-         loading="lazy">
-    <div class="product-info">
-        <div class="product-title">{{ $product->name }}</div>
-        <div class="product-price">${{ number_format($product->price, 2) }}</div>
-        <div class="rating">
-            @for ($i = 0; $i < floor($product->rating ?? 0); $i++) ★ @endfor
-            ({{ $product->rating ?? 0 }})
-        </div>
-        <small>{{ $product->brand ?? '' }}</small>
+<a
+    href="{{ $resolvedHref ?? '#' }}"
+    class="group block overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+>
+    <div class="aspect-[4/3] w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+        <img
+            src="{{ $resolvedImageUrl ?? 'https://picsum.photos/seed/carpintec/800/600' }}"
+            alt="{{ $resolvedProductName }}"
+            loading="lazy"
+            class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+        />
     </div>
-</div>
+
+    <div class="flex flex-col gap-2 p-4">
+        <div class="flex items-start justify-between gap-3">
+            <h3 class="line-clamp-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                {{ $resolvedProductName }}
+            </h3>
+
+            @if ($resolvedPrice !== null)
+                <div class="shrink-0 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                    ${{ number_format((float) $resolvedPrice, 2) }}
+                </div>
+            @endif
+        </div>
+
+        <div class="text-sm text-zinc-600 dark:text-zinc-300">
+            Ver detalles
+        </div>
+    </div>
+</a>

@@ -5,6 +5,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
 
+// Store (UI scaffolding, sin lógica de negocio)
+Route::view('/store', 'pages.home')->name('store.home');
+Route::view('/products', 'pages.products.index')->name('products.index');
+Route::view('/products/{slug}', 'pages.products.show')->name('products.show');
+
 // Ruta de login personalizada (pantalla de selección de rol + auth)
 Route::view('/acceso', 'auth.login')->name('carpintec.login');
 
