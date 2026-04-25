@@ -20,23 +20,31 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $updated_at
  * @property-read Order $order
  * @property-read Product $product
- * @property-read InventoryMovement|null $inventoryMovement
  */
 class OrderItem extends Model
 {
     use HasFactory, HasUuids;
 
     /**
-     * @var list<string>
+     * The "type" of the primary key ID.
+     *
+     * @var string
      */
-    protected $fillable = [
-        'order_id',
-        'product_id',
-        'inventory_movement_id',
-        'quantity',
-        'unit_price',
-        'unit_discount',
-    ];
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = [];
 
     /**
      * @return array<string, string>
@@ -68,13 +76,5 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
-    }
-
-    /**
-     * Relación N:1 — Movimiento de inventario asociado a esta línea (trazabilidad de stock).
-     */
-    public function inventoryMovement(): BelongsTo
-    {
-        return $this->belongsTo(InventoryMovement::class);
     }
 }

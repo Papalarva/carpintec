@@ -28,18 +28,25 @@ class Payment extends Model
     use HasFactory, HasUuids;
 
     /**
-     * @var list<string>
+     * The "type" of the primary key ID.
+     *
+     * @var string
      */
-    protected $fillable = [
-        'order_id',
-        'status_id',
-        'amount',
-        'method',
-        'mp_preference_id',
-        'mp_payment_id',
-        'mp_data',
-        'paid_at',
-    ];
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = [];
 
     /**
      * @return array<string, string>

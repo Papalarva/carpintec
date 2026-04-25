@@ -39,14 +39,11 @@ class Inventory extends Model
     protected $keyType = 'string';
 
     /**
-     * @var list<string>
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
      */
-    protected $fillable = [
-        'product_id',
-        'quantity',
-        'min_quantity',
-        'location',
-    ];
+    protected $guarded = [];
 
     /**
      * @return array<string, string>

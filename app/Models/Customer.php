@@ -32,16 +32,25 @@ class Customer extends Model
     use HasFactory, HasUuids;
 
     /**
-     * @var list<string>
+     * The "type" of the primary key ID.
+     *
+     * @var string
      */
-    protected $fillable = [
-        'user_id',
-        'first_name',
-        'last_name',
-        'phone',
-        'birth_date',
-        'accepts_marketing',
-    ];
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = [];
 
     /**
      * @return array<string, string>

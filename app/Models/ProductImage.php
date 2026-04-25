@@ -24,15 +24,25 @@ class ProductImage extends Model
     use HasFactory, HasUuids;
 
     /**
-     * @var list<string>
+     * The "type" of the primary key ID.
+     *
+     * @var string
      */
-    protected $fillable = [
-        'product_id',
-        'url',
-        'alt_text',
-        'sort_order',
-        'is_cover',
-    ];
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = [];
 
     /**
      * @return array<string, string>

@@ -23,11 +23,25 @@ class Cart extends Model
     use HasFactory, HasUuids;
 
     /**
-     * @var list<string>
+     * The "type" of the primary key ID.
+     *
+     * @var string
      */
-    protected $fillable = [
-        'customer_id',
-    ];
+    protected $keyType = 'string';
+
+    /**
+     * Indicates if the IDs are auto-incrementing.
+     *
+     * @var bool
+     */
+    public $incrementing = false;
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $guarded = [];
 
     // ==========================================
     // RELACIONES
