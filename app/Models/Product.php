@@ -3,13 +3,17 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
-class Product extends Model
+class Product extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, InteractsWithMedia;
 
     public $incrementing = false;
     protected $keyType = 'string';
@@ -43,80 +47,146 @@ class Product extends Model
         'deleted_at'      => 'datetime',
     ];
 
-    // ──────────────────────
-    // Relaciones
-    // ──────────────────────
+    // Colección de imágenes del producto
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('product_images')
+             ->useDisk('supabase')
+             ->registerMediaConversions(function (Media $media) {
+                 $this->addMediaConversion('webp')
+                      ->format('webp')
+                      ->quality(85)
+                      ->performOnCollections('product_images');
+             });
+    }
 
+    // Relación con categoría
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    public function images()
-    {
-        return $this->hasMany(ProductImage::class)->orderBy('sort_order');
-    }
-
-    // Imagen de portada (la marcada is_cover = true)
-    public function coverImage()
-    {
-        return $this->hasOne(ProductImage::class)->where('is_cover', true);
-    }
-
+    // Inventario
     public function inventory()
     {
         return $this->hasOne(Inventory::class, 'product_id');
     }
 
-    // ──────────────────────
-    // Scopes para catálogo público
-    // ──────────────────────
+    // Accesor helper para la imagen de portada (la primera en orden)
+    public function images()
+    {
+        return $this->morphMany(Media::class, 'model')
+            ->where('collection_name', 'product_images')
+            ->orderBy('order_column');
+    }
 
-    public function scopeActive($query)
+    public function coverImage()
+    {
+        return $this->morphOne(Media::class, 'model')
+            ->where('collection_name', 'product_images')
+            ->orderBy('order_column');
+    }
+
+    public function getImagesAttribute()
+    {
+        $images = $this->relationLoaded('images')
+            ? $this->getRelation('images')
+            : $this->images()->get();
+
+        return $images->map(function (Media $media) {
+            $media->setAttribute('webp_path', $this->mediaPath($media));
+
+            return $media;
+        });
+    }
+
+    public function getCoverImageAttribute()
+    {
+        $cover = $this->relationLoaded('coverImage')
+            ? $this->getRelation('coverImage')
+            : $this->coverImage()->first();
+
+        if (!$cover) {
+            return null;
+        }
+
+        $cover->setAttribute('webp_path', $this->mediaPath($cover));
+
+        return $cover;
+    }
+
+    // Scopes (se mantienen)
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
     }
 
-    public function scopeInCategory($query, $categoryId)
+    public function scopeSearch(Builder $query, ?string $term): Builder
     {
-        return $query->where('category_id', $categoryId);
-    }
+        if (blank($term)) {
+            return $query;
+        }
 
-    public function scopeSearch($query, $term)
-    {
-        return $query->where(function ($q) use ($term) {
-            $q->where('name', 'ilike', "%{$term}%")
-              ->orWhere('short_description', 'ilike', "%{$term}%")
-              ->orWhere('sku', 'ilike', "%{$term}%");
+        return $query->where(function (Builder $inner) use ($term) {
+            $inner->where('name', 'ilike', "%{$term}%")
+                ->orWhere('short_description', 'ilike', "%{$term}%")
+                ->orWhere('sku', 'ilike', "%{$term}%");
         });
     }
 
-    public function scopePriceBetween($query, $min, $max)
+    // Ruta amigable con slug: {product}
+    public function getRouteKeyName(): string
     {
-        if (!is_null($min)) {
-            $query->where('price', '>=', $min);
-        }
-        if (!is_null($max)) {
-            $query->where('price', '<=', $max);
-        }
-        return $query;
+        return 'slug';
     }
 
-    // ──────────────────────
-    // Auto-slug
-    // ──────────────────────
     protected static function booted()
     {
-        static::creating(function ($product) {
+        static::creating(function (Product $product) {
+            if (empty($product->id)) {
+                $product->id = (string) Str::uuid();
+            }
+
             if (empty($product->slug)) {
-                $product->slug = Str::slug($product->name);
+                $product->slug = static::uniqueSlugFrom($product->name);
             }
         });
 
-        static::updating(function ($product) {
+        static::updating(function (Product $product) {
             if ($product->isDirty('name') && !$product->isDirty('slug')) {
-                $product->slug = Str::slug($product->name);
+                $product->slug = static::uniqueSlugFrom($product->name, $product->id);
+            }
+
+            if ($product->isDirty('slug')) {
+                $product->slug = static::uniqueSlugFrom($product->slug, $product->id);
             }
         });
+    }
+
+    protected static function uniqueSlugFrom(?string $value, ?string $ignoreId = null): string
+    {
+        $base = Str::slug((string) $value);
+
+        if ($base === '') {
+            $base = 'product';
+        }
+
+        $slug = $base;
+        $suffix = 2;
+
+        while (static::query()
+            ->when($ignoreId, fn (Builder $query) => $query->where('id', '!=', $ignoreId))
+            ->where('slug', $slug)
+            ->exists()) {
+            $slug = "{$base}-{$suffix}";
+            $suffix++;
+        }
+
+        return $slug;
+    }
+
+    protected function mediaPath(Media $media): string
+    {
+        return "{$media->id}/{$media->file_name}";
     }
 }
