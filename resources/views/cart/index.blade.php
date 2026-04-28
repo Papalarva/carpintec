@@ -101,7 +101,7 @@
                     <a href="{{ route('catalog.index') }}" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition">
                         Seguir comprando
                     </a>
-                    <a href="#" class="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
+                    <a href="{{ route('checkout.index') }}" class="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
                         Proceder al checkout
                     </a>
                 </div>

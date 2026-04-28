@@ -189,4 +189,9 @@ class Product extends Model implements HasMedia
     {
         return "{$media->id}/{$media->file_name}";
     }
+
+    public function inventoryMovements(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InventoryMovement::class);
+    }
 }

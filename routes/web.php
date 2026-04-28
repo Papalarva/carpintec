@@ -5,6 +5,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\AddressController;
+use App\Http\Controllers\CheckoutController;
+use App\Models\Order;
+use App\Models\User;  
+use Illuminate\Http\Request;  
 
 Route::get('/', function () {
     return view('welcome');
@@ -41,6 +45,27 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('addresses', AddressController::class)->except(['show']);
     Route::post('addresses/{address}/set-primary', [AddressController::class, 'setPrimary'])
         ->name('addresses.set-primary');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('checkout.apply-coupon');
+    Route::delete('/checkout/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('checkout.remove-coupon');
+
+    Route::get('/pedido/{order}/confirmacion', function (Request $request, Order $order) {
+        
+        /** @var User $user */
+        $user = $request->user();
+
+        // Ahora el editor sabe perfectamente quién es $user y qué es ->customer
+        if ($order->customer_id !== $user->customer->id) {
+            abort(403);
+        }
+        
+        return view('orders.confirmation', compact('order'));
+        
+    })->name('orders.confirmation');
 });
 
 require __DIR__.'/auth.php';
