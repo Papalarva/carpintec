@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\AddressController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -35,5 +36,11 @@ Route::post('/carrito/agregar/{product:slug}', [CartController::class, 'add'])->
 Route::patch('/carrito/{product:slug}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/carrito/{product:slug}', [CartController::class, 'remove'])->name('cart.remove');
 Route::get('/carrito/count', [CartController::class, 'count'])->name('cart.count');
+
+Route::middleware(['auth'])->group(function () {
+    Route::resource('addresses', AddressController::class)->except(['show']);
+    Route::post('addresses/{address}/set-primary', [AddressController::class, 'setPrimary'])
+        ->name('addresses.set-primary');
+});
 
 require __DIR__.'/auth.php';
