@@ -1,11 +1,13 @@
-@extends('layouts.app')
+<x-app-layout>
+    <x-slot:title>{{ $product->name }} - Carpintec</x-slot:title>
 
-@section('title', $product->name . ' - Carpintec')
-@section('meta_description', Str::limit($product->short_description, 160))
+    @push('head')
+        <meta name="description" content="{{ Str::limit($product->short_description, 160) }}">
+        <meta name="robots" content="index, follow">
+    @endpush
 
-@section('content')
-<div class="bg-white">
-    <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div class="bg-white">
+        <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <!-- Breadcrumb básico -->
         <nav class="flex mb-8" aria-label="Breadcrumb">
             <ol role="list" class="flex items-center space-x-2 text-sm text-gray-500">
@@ -206,4 +208,4 @@
         @endif
     </div>
 </div>
-@endsection
+</x-app-layout>
