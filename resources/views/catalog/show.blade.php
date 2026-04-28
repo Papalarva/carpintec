@@ -132,7 +132,7 @@
                             Solicitar cotización a medida
                         </a>
                     @else
-                        <form action="{{ route('cart.add', $product->id) }}" method="POST">
+                        <form action="{{ Route::post('/carrito/agregar/{product}', [CartController::class, 'add'])->name('cart.add'); }}" method="POST">
                             @csrf
                             <div class="flex items-center space-x-4 mb-4">
                                 <label for="quantity" class="text-sm font-medium text-gray-700">Cantidad</label>

@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CatalogController;
+use App\Http\Controllers\CartController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -27,5 +28,12 @@ Route::post('/carrito/agregar/{product}', function () {
 Route::get('/cotizar/{product}', function () {
     return redirect()->back()->with('info', 'Las cotizaciones estarán disponibles próximamente.');
 })->name('quotation.request');
+
+// Carrito
+Route::get('/carrito', [CartController::class, 'index'])->name('cart.index');
+Route::post('/carrito/agregar/{product:slug}', [CartController::class, 'add'])->name('cart.add');
+Route::patch('/carrito/{product:slug}', [CartController::class, 'update'])->name('cart.update');
+Route::delete('/carrito/{product:slug}', [CartController::class, 'remove'])->name('cart.remove');
+Route::get('/carrito/count', [CartController::class, 'count'])->name('cart.count');
 
 require __DIR__.'/auth.php';
