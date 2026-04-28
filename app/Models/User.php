@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable implements MustVerifyEmail // opcional si usas verificación
 {
@@ -33,5 +34,10 @@ class User extends Authenticatable implements MustVerifyEmail // opcional si usa
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function customer(): HasOne
+    {
+        return $this->hasOne(Customer::class);
     }
 }
