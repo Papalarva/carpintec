@@ -72,7 +72,6 @@ return [
             'throw' => false,
             'visibility' => 'public',
         ],
-
     ],
 
     /*
