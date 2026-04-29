@@ -9,13 +9,9 @@ class Inventory extends Model
 {
     use HasFactory;
 
-    // La clave primaria es 'product_id', no 'id'
-    protected $primaryKey = 'product_id';
     public $incrementing = false;
     protected $keyType = 'string';
-
-    // En la tabla solo existe updated_at, no created_at
-    const CREATED_AT = null;
+    protected $table = 'inventory'; // ← ¡esto es clave!
 
     protected $fillable = [
         'product_id',

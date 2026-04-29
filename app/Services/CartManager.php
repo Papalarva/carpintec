@@ -118,7 +118,7 @@ class CartManager
         $cart = $customer->cart()->firstOrCreate([]);
 
         foreach ($sessionItems as $productId => $quantity) {
-            $product = Product::find($productId);
+            $product = Product::with('media')->find($productId);
             if (!$product) {
                 continue;
             }
@@ -157,7 +157,7 @@ class CartManager
             return collect();
         }
 
-        return $cart->items()->with('product')->get();
+        return $cart->items()->with('product.media')->get();
     }
 
     private function addToDatabase(Product $product, int $quantity): void
