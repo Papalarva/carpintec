@@ -20,13 +20,14 @@
             </x-admin.sidebar-link>
 
             @role(['admin','worker'])
-            <x-admin.sidebar-link href="#" :active="false">Catálogo</x-admin.sidebar-link>
+            <x-admin.sidebar-link href="{{ route('admin.categories.index') }}" :active="request()->routeIs('admin.categories.*')">Categorías</x-admin.sidebar-link>
+            <x-admin.sidebar-link href="{{ route('admin.products.index') }}" :active="request()->routeIs('admin.products.*')">Productos</x-admin.sidebar-link>
             <x-admin.sidebar-link href="#" :active="false">Pedidos</x-admin.sidebar-link>
             <x-admin.sidebar-link href="#" :active="false">Cotizaciones</x-admin.sidebar-link>
             @endrole
 
             @role('admin')
-            <x-admin.sidebar-link href="#" :active="false">Usuarios</x-admin.sidebar-link>
+            <x-admin.sidebar-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')">Usuarios</x-admin.sidebar-link>
             <x-admin.sidebar-link href="#" :active="false">Descuentos</x-admin.sidebar-link>
             <x-admin.sidebar-link href="#" :active="false">Inventario</x-admin.sidebar-link>
             <x-admin.sidebar-link href="#" :active="false">Reportes</x-admin.sidebar-link>

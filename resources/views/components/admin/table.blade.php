@@ -1,6 +1,6 @@
-@props(['headers' => [], 'rows' => [], 'emptyMessage' => 'No hay registros.'])
+@props(['headers' => []])
 
-<div class="overflow-x-auto bg-white rounded-lg shadow">
+<div class="overflow-x-auto bg-white rounded-lg shadow mb-4">
     <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gray-50">
             <tr>
@@ -12,18 +12,8 @@
             </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-            @forelse($rows as $row)
-                <tr class="hover:bg-gray-50">
-                    {!! $row !!}
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="{{ count($headers) }}" class="px-6 py-4 text-center text-sm text-gray-500">
-                        {{ $emptyMessage }}
-                    </td>
-                </tr>
-            @endforelse
+            {{-- Aquí se inyectarán los <tr> que definas en tus vistas --}}
+            {{ $slot }}
         </tbody>
     </table>
 </div>
-{{ $rows->links() ?? '' }}

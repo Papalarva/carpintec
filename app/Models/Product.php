@@ -50,14 +50,7 @@ class Product extends Model implements HasMedia
     // Colección de imágenes del producto
     public function registerMediaCollections(): void
     {
-        $this->addMediaCollection('product_images')
-             ->useDisk('supabase')
-             ->registerMediaConversions(function (Media $media) {
-                 $this->addMediaConversion('webp')
-                      ->format('webp')
-                      ->quality(85)
-                      ->performOnCollections('product_images');
-             });
+        $this->addMediaCollection('product_images');
     }
 
     // Relación con categoría

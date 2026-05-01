@@ -12,7 +12,6 @@ trait HasRoles
      */
     public function roles(): BelongsToMany
     {
-        // ELIMINAMOS la línea ->wherePivot(...) para evitar el problema de las diagonales
         return $this->belongsToMany(Role::class, 'model_has_roles', 'model_id', 'role_id');
     }
 

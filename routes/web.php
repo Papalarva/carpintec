@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Route;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use App\Http\Controllers\QuotationController;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\UserController;
 
 // ─── Páginas estáticas ──────────────────────────────────
 Route::get('/', function () {
@@ -59,6 +64,24 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'role:admin,worker'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
+});
+
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,worker'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Categorías y productos (trabajadores y admin)
+    Route::resource('categories', CategoryController::class);
+    Route::resource('products', ProductController::class);
+
+    // Productos - rutas adicionales (soft deletes)
+    Route::post('products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+    Route::delete('products/{id}/force-delete', [ProductController::class, 'forceDelete'])->name('products.force-delete');
+
+    // Rutas exclusivas para admin
+    Route::middleware('role:admin')->group(function () {
+        Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
+        Route::resource('roles', RoleController::class)->except(['show']);
+    });
 });
 
 // ─── Rutas de autenticación (Breeze) ────────────────────
