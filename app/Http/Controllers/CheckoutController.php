@@ -211,4 +211,14 @@ class CheckoutController extends Controller
         session()->forget('checkout.coupon_code');
         return back()->with('success', 'Cupón eliminado.');
     }
+
+    public function confirmation(\App\Models\Order $order, \Illuminate\Http\Request $request)
+    {
+        // Usamos ?->id por si el usuario logueado no es cliente (ej. un admin)
+        if ($order->customer_id !== $request->user()->customer?->id) {
+            abort(403, 'No tienes permiso para ver este pedido.');
+        }
+        
+        return view('orders.confirmation', compact('order'));
+    }
 }

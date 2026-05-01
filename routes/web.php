@@ -37,11 +37,7 @@ Route::delete('/carrito/{product:slug}', [CartController::class, 'remove'])->nam
 Route::get('/carrito/count', [CartController::class, 'count'])->name('cart.count');
 
 // ─── Direcciones (clientes autenticados) ────────────────
-Route::middleware(['auth'])->group(function () {
-    Route::resource('addresses', AddressController::class)->except(['show']);
-    Route::post('addresses/{address}/set-primary', [AddressController::class, 'setPrimary'])
-        ->name('addresses.set-primary');
-});
+Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 
 // ─── Checkout (clientes autenticados) ───────────────────
 Route::middleware(['auth'])->group(function () {
@@ -49,13 +45,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::post('/checkout/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('checkout.apply-coupon');
     Route::delete('/checkout/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('checkout.remove-coupon');
-
-    Route::get('/pedido/{order}/confirmacion', function (Order $order) {
-        if ($order->customer_id !== request()->user()->customer->id) {
-            abort(403);
-        }
-        return view('orders.confirmation', compact('order'));
-    })->name('orders.confirmation');
+    Route::get('/pedido/{order}/confirmacion', [CheckoutController::class, 'confirmation'])->name('orders.confirmation');
 });
 
 // Cotizaciones personalizadas
@@ -65,6 +55,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cotizaciones', [QuotationController::class, 'index'])->name('quotations.index');
     Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
     Route::get('/cotizaciones/{quotation}/adjunto/{filename}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
+});
+
+Route::middleware(['auth', 'role:admin,worker'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('dashboard');
 });
 
 // ─── Rutas de autenticación (Breeze) ────────────────────
