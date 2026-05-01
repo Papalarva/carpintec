@@ -117,6 +117,15 @@
                         <div class="grid grid-cols-1 gap-y-10 gap-x-6 sm:grid-cols-2 lg:grid-cols-3 xl:gap-x-8">
                             @foreach ($products as $product)
                                 <div class="group relative rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+                                    
+                                    <!-- NUEVO: Badge de Agotado -->
+                                    @php $isOutOfStock = $product->track_inventory && ($product->inventory?->quantity ?? 0) < 1; @endphp
+                                    @if($isOutOfStock)
+                                        <div class="absolute top-2 right-2 z-10 rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold text-white shadow-sm pointer-events-none">
+                                            Agotado
+                                        </div>
+                                    @endif
+
                                     @if ($product->getFirstMedia('product_images'))
                                         <div class="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-t-lg bg-gray-100">
                                             <img src="{{ $product->getFirstMedia('product_images')->getUrl('webp') }}"
@@ -137,11 +146,6 @@
                                             <h3 class="text-sm font-medium text-gray-900">{{ $product->name }}</h3>
                                         </a>
                                         <p class="mt-2 text-lg font-bold text-gray-900">${{ number_format($product->price, 2) }} MXN</p>
-                                        @if($product->is_customizable)
-                                            <span class="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
-                                                Personalizable
-                                            </span>
-                                        @endif
                                     </div>
                                 </div>
                             @endforeach

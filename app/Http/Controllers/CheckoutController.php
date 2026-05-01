@@ -5,39 +5,29 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shipment;
-use App\Models\User; // 1. Importación del modelo User
 use App\Services\CartManager;
 use App\Services\DiscountService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Routing\Controllers\HasMiddleware; // 2. Nuevas clases para middleware
-use Illuminate\Routing\Controllers\Middleware;
 
-class CheckoutController extends Controller implements HasMiddleware // 3. Implementar interfaz
+class CheckoutController extends Controller
 {
-    public function __construct(
-        protected CartManager $cart,
-        protected DiscountService $discountService
-    ) {
-        // En Laravel 11/13, el constructor ya no maneja los middlewares.
+    protected $cart;
+    protected $discountService;
+
+    public function __construct(CartManager $cart, DiscountService $discountService)
+    {
+        $this->cart = $cart;
+        $this->discountService = $discountService;
+        $this->middleware('auth');
     }
 
     /**
-     * 4. Nueva convención de Laravel para declarar middlewares en el controlador.
+     * Muestra la página de checkout.
      */
-    public static function middleware(): array
+    public function index()
     {
-        return [
-            new Middleware('auth'),
-        ];
-    }
-
-    public function index(Request $request)
-    {
-        /** @var User $user */
-        $user = $request->user(); // Tipado estricto
-        $customer = $user->customer;
-
+        $customer = request()->user()->customer;
         if (!$customer->addresses()->exists()) {
             return redirect()->route('addresses.create')
                 ->with('warning', 'Registra una dirección de envío para continuar.');
@@ -77,12 +67,12 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
         ));
     }
 
+    /**
+     * Procesa el pedido.
+     */
     public function store(Request $request)
     {
-        /** @var User $user */
-        $user = $request->user();
-        $customer = $user->customer;
-        
+        $customer = request()->user()->customer;
         $items = $this->cart->getItems();
         if ($items->isEmpty()) {
             abort(400, 'Carrito vacío');
@@ -117,7 +107,7 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
 
         $order = DB::transaction(function () use (
             $customer, $addressId, $shippingMethod, $shippingCost,
-            $subtotal, $discountAmount, $total, $items, $coupon, $validated, $user
+            $subtotal, $discountAmount, $total, $items, $coupon, $validated
         ) {
             $shipment = Shipment::create([
                 'address_id'      => $addressId,
@@ -127,23 +117,22 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
             ]);
 
             $order = Order::create([
-                'customer_id'         => $customer->id,
+                'customer_id'        => $customer->id,
                 'shipping_address_id' => $addressId,
-                'shipment_id'         => $shipment->id,
-                'coupon_id'           => $coupon?->id,
-                'status_id'           => 1, // pending
-                'subtotal'            => $subtotal,
-                'discount_total'      => $discountAmount,
-                'shipping_cost'       => $shippingCost,
-                'total'               => $total,
-                'notes'               => $validated['notes'] ?? null,
+                'shipment_id'        => $shipment->id,
+                'coupon_id'          => $coupon?->id,
+                'status_id'          => 1, // pending
+                'subtotal'           => $subtotal,
+                'discount_total'     => $discountAmount,
+                'shipping_cost'      => $shippingCost,
+                'total'              => $total,
+                'notes'              => $validated['notes'] ?? null,
             ]);
 
             foreach ($items as $item) {
                 $product = $item->product;
                 $quantity = $item->quantity;
                 $unitPrice = $product->price;
-                
                 $orderItem = $order->items()->create([
                     'product_id'    => $product->id,
                     'quantity'      => $quantity,
@@ -158,7 +147,7 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
                         'quantity'           => $quantity,
                         'resulting_quantity' => $product->inventory->fresh()->quantity,
                         'reference'          => "Pedido #{$order->id}",
-                        'user_id'            => $user->id, // 5. Usamos $user->id en lugar de auth()->id()
+                        'user_id'            => request()->user()?->id,
                     ]);
                     $orderItem->update(['inventory_movement_id' => $movement->id]);
                 }
@@ -188,20 +177,18 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
             ->with('success', 'Pedido creado. Está pendiente de pago.');
     }
 
+    /**
+     * Aplica un cupón de descuento.
+     */
     public function applyCoupon(Request $request)
     {
         $request->validate(['code' => 'required|string']);
-        
-        /** @var User $user */
-        $user = $request->user();
-        $customer = $user->customer;
-        
+        $customer = request()->user()->customer;
         $items = $this->cart->getItems();
 
         try {
             $result = $this->discountService->applyCoupon($request->code, $items, $customer);
             session()->put('checkout.coupon_code', $request->code);
-            
             return response()->json([
                 'success'  => true,
                 'discount' => $result['amount'],
@@ -216,6 +203,9 @@ class CheckoutController extends Controller implements HasMiddleware // 3. Imple
         }
     }
 
+    /**
+     * Elimina el cupón aplicado.
+     */
     public function removeCoupon()
     {
         session()->forget('checkout.coupon_code');

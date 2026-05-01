@@ -8,15 +8,16 @@ use App\Models\User;
 class AddressPolicy
 {
     /**
-     * Determine if the user can view any addresses.
+     * Determina si el usuario puede ver cualquier dirección.
      */
     public function viewAny(User $user): bool
     {
+        // Solo clientes (usuarios con registro en customers)
         return $user->customer !== null;
     }
 
     /**
-     * Determine if the user can view the address.
+     * Determina si el usuario puede ver una dirección concreta.
      */
     public function view(User $user, Address $address): bool
     {
@@ -24,7 +25,7 @@ class AddressPolicy
     }
 
     /**
-     * Determine if the user can create addresses.
+     * Determina si el usuario puede crear direcciones.
      */
     public function create(User $user): bool
     {
@@ -32,7 +33,7 @@ class AddressPolicy
     }
 
     /**
-     * Determine if the user can update the address.
+     * Determina si el usuario puede actualizar la dirección.
      */
     public function update(User $user, Address $address): bool
     {
@@ -40,10 +41,18 @@ class AddressPolicy
     }
 
     /**
-     * Determine if the user can delete the address.
+     * Determina si el usuario puede eliminar la dirección.
      */
     public function delete(User $user, Address $address): bool
     {
         return $this->view($user, $address);
+    }
+
+    /**
+     * Determina si el usuario puede establecer una dirección como principal.
+     */
+    public function setPrimary(User $user, Address $address): bool
+    {
+        return $this->update($user, $address);
     }
 }

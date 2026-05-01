@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Exception;
 
 class CartManager
 {
@@ -25,15 +26,22 @@ class CartManager
         return $this->getSessionItems();
     }
 
-    /**
-     * Agrega un producto al carrito. Si ya existe, incrementa la cantidad.
-     */
     public function addItem(Product $product, int $quantity = 1): void
     {
         if ($quantity < 1) {
             return;
         }
 
+        // 1. Calculamos el total (Lo que ya tiene + lo nuevo que pide)
+        // Convertimos el UUID a string para comparar correctamente
+        $currentCartQty = $this->getQuantityInCart((string) $product->id);
+        $totalRequested = $currentCartQty + $quantity;
+
+        // 2. Validamos el total contra el inventario físico real
+        // (Si no hay stock suficiente, esto lanza una Exception y se detiene la ejecución)
+        $this->validateInventory($product, $totalRequested);
+
+        // 3. Si sobrevivió a la validación, procedemos a guardar
         if (Auth::check() && Auth::user()->customer) {
             $this->addToDatabase($product, $quantity);
         } else {
@@ -41,9 +49,6 @@ class CartManager
         }
     }
 
-    /**
-     * Actualiza la cantidad de un producto en el carrito.
-     */
     public function updateQuantity(string $productId, int $quantity): void
     {
         if ($quantity < 1) {
@@ -51,6 +56,15 @@ class CartManager
             return;
         }
 
+        // 1. Buscamos el producto para poder validarlo
+        $product = Product::find($productId);
+
+        if ($product) {
+            // 2. Aquí la cantidad solicitada reemplaza a la anterior, así que es absoluta
+            $this->validateInventory($product, $quantity);
+        }
+
+        // 3. Si todo está bien, actualizamos el almacenamiento respectivo
         if (Auth::check() && Auth::user()->customer) {
             $this->updateDatabaseQuantity($productId, $quantity);
         } else {
@@ -115,7 +129,7 @@ class CartManager
             return;
         }
 
-        $cart = $customer->cart()->firstOrCreate([]);
+        $cart = $customer->cart()->firstOrCreate(['customer_id' => $customer->id]);
 
         foreach ($sessionItems as $productId => $quantity) {
             $product = Product::with('media')->find($productId);
@@ -163,7 +177,7 @@ class CartManager
     private function addToDatabase(Product $product, int $quantity): void
     {
         $customer = Auth::user()->customer;
-        $cart = $customer->cart()->firstOrCreate([]);
+        $cart = $customer->cart()->firstOrCreate(['customer_id' => $customer->id]);
 
         $existingItem = $cart->items()->where('product_id', $product->id)->first();
 
@@ -240,4 +254,45 @@ class CartManager
         unset($cart[$productId]);
         session()->put('cart', $cart);
     }
+
+    protected function validateInventory(Product $product, int $requestedQuantity): void
+    {
+        // Si el producto no controla inventario, tiene pase libre
+        if (!$product->track_inventory) {
+            return; 
+        }
+
+        // Si no existe la relación inventory, asumimos que hay 0
+        $availableStock = $product->inventory ? $product->inventory->quantity : 0;
+
+        // Validación estricta matemática
+        if ($requestedQuantity > $availableStock) {
+            $message = $availableStock > 0 
+                ? "Stock máximo alcanzado. Solo hay {$availableStock} unidad(es) disponible(s)." 
+                : "Este producto se encuentra temporalmente agotado.";
+                
+            throw new Exception($message);
+        }
+    }
+
+    /**
+     * Calcula cuántas unidades de un producto específico YA están en el carrito.
+     * Esta función evita el error de "TValue" soportando Sesión (Arrays) y BD (Objetos).
+     */
+    public function getQuantityInCart(string $productId): int
+    {
+        $items = $this->getItems(); // Recuperamos lo que haya en Sesión o BD
+
+        foreach ($items as $item) {
+            // Evaluamos de forma segura si es array (sesión) u objeto (BD)
+            $itemId = is_array($item) ? ($item['product_id'] ?? $item['id'] ?? null) : $item->product_id;
+            
+            if ((string) $itemId === $productId) {
+                return (int) (is_array($item) ? $item['quantity'] : $item->quantity);
+            }
+        }
+
+        return 0;
+    }
+    
 }
