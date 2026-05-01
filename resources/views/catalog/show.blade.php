@@ -222,7 +222,7 @@
                                 </button>
 
                                 {{-- Botón Solicitar cotización --}}
-                                <a href="{{ route('quotation.request', $product->slug) }}"
+                                <a href="{{ route('quotation.request', ['product' => $product->slug, 'subject' => $product->name]) }}"
                                     class="flex-1 flex justify-center items-center rounded-md border border-amber-700 bg-white px-6 py-3 text-base font-medium text-amber-700 hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 transition">
                                     Solicitar cotización a medida
                                 </a>

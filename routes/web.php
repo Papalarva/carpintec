@@ -7,6 +7,7 @@ use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Order;
 use Illuminate\Http\Request;
+use App\Http\Controllers\QuotationController;
 
 // ─── Páginas estáticas ──────────────────────────────────
 Route::get('/', function () {
@@ -35,11 +36,6 @@ Route::patch('/carrito/{product:slug}', [CartController::class, 'update'])->name
 Route::delete('/carrito/{product:slug}', [CartController::class, 'remove'])->name('cart.remove');    // binding por slug
 Route::get('/carrito/count', [CartController::class, 'count'])->name('cart.count');
 
-// ─── Cotizaciones (placeholder, se implementará después) ─
-Route::get('/cotizar/{product}', function () {
-    return redirect()->back()->with('info', 'Las cotizaciones estarán disponibles próximamente.');
-})->name('quotation.request');
-
 // ─── Direcciones (clientes autenticados) ────────────────
 Route::middleware(['auth'])->group(function () {
     Route::resource('addresses', AddressController::class)->except(['show']);
@@ -60,6 +56,15 @@ Route::middleware(['auth'])->group(function () {
         }
         return view('orders.confirmation', compact('order'));
     })->name('orders.confirmation');
+});
+
+// Cotizaciones personalizadas
+Route::middleware(['auth'])->group(function () {
+    Route::get('/cotizar/{product?}', [QuotationController::class, 'create'])->name('quotation.request');
+    Route::post('/cotizaciones', [QuotationController::class, 'store'])->name('quotations.store');
+    Route::get('/cotizaciones', [QuotationController::class, 'index'])->name('quotations.index');
+    Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
+    Route::get('/cotizaciones/{quotation}/adjunto/{filename}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
 });
 
 // ─── Rutas de autenticación (Breeze) ────────────────────
