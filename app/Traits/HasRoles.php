@@ -3,16 +3,19 @@
 namespace App\Traits;
 
 use App\Models\Role;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+// 1. Cambiamos el import a MorphToMany
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 trait HasRoles
 {
     /**
-     * Relación: Un modelo tiene muchos roles a través de la tabla pivote.
+     * Relación: Un modelo tiene muchos roles a través de la tabla pivote polimórfica.
      */
-    public function roles(): BelongsToMany
+    public function roles(): MorphToMany // 2. Actualizamos el tipo de retorno
     {
-        return $this->belongsToMany(Role::class, 'model_has_roles', 'model_id', 'role_id');
+        // 3. Cambiamos belongsToMany por morphToMany
+        // El segundo parámetro 'model' le indica a Laravel que las columnas se llaman 'model_id' y 'model_type'
+        return $this->morphToMany(Role::class, 'model', 'model_has_roles', 'model_id', 'role_id');
     }
 
     /**

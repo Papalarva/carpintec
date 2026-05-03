@@ -13,19 +13,31 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
+        $roleId = $request->query('role'); // Capturamos el nuevo filtro
 
         $users = User::query()
             ->when($search, fn ($q) =>
-                $q->where('first_name', 'ilike', "%{$search}%")
-                  ->orWhere('last_name', 'ilike', "%{$search}%")
-                  ->orWhere('email', 'ilike', "%{$search}%")
+                // Agrupamos los OR para que no rompan el filtro de roles
+                $q->where(fn($query) =>
+                    $query->where('first_name', 'ilike', "%{$search}%")
+                          ->orWhere('last_name', 'ilike', "%{$search}%")
+                          ->orWhere('email', 'ilike', "%{$search}%")
+                )
+            )
+            ->when($roleId, fn ($q) =>
+                // Filtramos por la relación muchos a muchos
+                $q->whereHas('roles', fn ($query) => $query->where('roles.id', $roleId))
             )
             ->with('roles')
             ->orderBy('created_at', 'desc')
             ->paginate(15)
-            ->appends(['search' => $search]);
+            // Aseguramos que la paginación recuerde ambos filtros
+            ->appends(['search' => $search, 'role' => $roleId]);
 
-        return view('admin.users.index', compact('users', 'search'));
+        // Obtenemos los roles para llenar el select de la vista
+        $roles = Role::orderBy('name')->get();
+
+        return view('admin.users.index', compact('users', 'search', 'roles', 'roleId'));
     }
 
     public function edit(User $user)

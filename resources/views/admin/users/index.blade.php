@@ -7,6 +7,17 @@
 <div class="mb-4 flex justify-between">
     <form method="GET" class="flex gap-2">
         <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Buscar..." class="rounded border-gray-300">
+        
+        <!-- Nuevo selector de roles -->
+        <select name="role" class="rounded border-gray-300">
+            <option value="">Todos los roles</option>
+            @foreach($roles as $role)
+                <option value="{{ $role->id }}" {{ (isset($roleId) && $roleId == $role->id) ? 'selected' : '' }}>
+                    {{ $role->name }}
+                </option>
+            @endforeach
+        </select>
+
         <button class="bg-indigo-600 text-white px-4 py-2 rounded">Buscar</button>
     </form>
 </div>
@@ -28,4 +39,9 @@
         </tr>
     @endforeach
 </x-admin.table>
+
+<!-- Aquí está la solución al misterio: Los controles de paginación -->
+<div class="mt-4">
+    {{ $users->links() }}
+</div>
 @endsection

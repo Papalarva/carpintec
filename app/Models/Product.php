@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Spatie\MediaLibrary\MediaCollections\Models\Media; 
 
 class Product extends Model implements HasMedia
 {
@@ -51,6 +51,14 @@ class Product extends Model implements HasMedia
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('product_images');
+    }
+
+    public function registerMediaConversions(Media $media = null): void
+    {
+        // Le decimos a Spatie que cree una copia optimizada en formato WebP
+        $this->addMediaConversion('webp')
+              ->format('webp')
+              ->performOnCollections('product_images');
     }
 
     // Relación con categoría
