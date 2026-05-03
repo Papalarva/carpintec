@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\QuotationStatus;
 use App\Http\Requests\StoreQuotationRequest;
 use App\Models\Product;
 use App\Models\Quotation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 // use App\Events\QuotationRequested; <-- Para implementar en el futuro
 
 class QuotationController extends Controller
@@ -19,6 +20,11 @@ class QuotationController extends Controller
 
     public function create(?Product $product = null)
     {
+        // Validación: Solo los clientes pueden crear cotizaciones
+        if (!Auth::user()->customer) {
+            return redirect()->route('dashboard')->with('error', 'Debes completar tu perfil de cliente para solicitar una cotización.');
+        }
+
         $subject = request('subject', '');
         return view('quotations.create', compact('product', 'subject'));
     }
@@ -26,22 +32,30 @@ class QuotationController extends Controller
     public function store(StoreQuotationRequest $request)
     {
         $customer = Auth::user()->customer;
+        
+        // Protección extra
+        if (!$customer) {
+            return redirect()->route('dashboard')->with('error', 'Perfil de cliente no encontrado.');
+        }
+
         $data = $request->validated();
         
         $data['customer_id'] = $customer->id;
-        $data['status'] = 'pending';
+        
+        // Regla 2: Usamos el Enum estricto en lugar de texto plano
+        $data['status'] = QuotationStatus::PENDING;
 
-        // ALMACENAMIENTO SEGURO: Usamos disco 'local' (privado), no 'public'
-        if ($request->hasFile('attachments')) {
-            $paths = [];
-            foreach ($request->file('attachments') as $file) {
-                // Se guarda en storage/app/quotations (inaccesible desde URL pública)
-                $paths[] = $file->store('quotations', 'local'); 
-            }
-            $data['attachments'] = $paths;
-        }
+        // Limpiamos los attachments del request para que no intente guardarlos en el JSONB
+        unset($data['attachments']);
 
         $quotation = Quotation::create($data);
+
+        // Regla 1: ALMACENAMIENTO SEGURO CON SPATIE MEDIALIBRARY
+        if ($request->hasFile('attachments')) {
+            foreach ($request->file('attachments') as $file) {
+                $quotation->addMedia($file)->toMediaCollection('quotation_files');
+            }
+        }
 
         // Disparamos un evento para enviar correos sin bloquear el render de la página
         // event(new QuotationRequested($quotation)); 
@@ -56,7 +70,14 @@ class QuotationController extends Controller
     public function index()
     {
         $customer = Auth::user()->customer;
-        $quotations = $customer->quotations()->latest()->get();
+
+        // SOLUCIÓN AL ERROR: Evitamos que intente buscar cotizaciones si no es cliente
+        if (!$customer) {
+            return redirect()->route('dashboard')->with('error', 'Solo los perfiles de cliente tienen historial de cotizaciones.');
+        }
+
+        // Agregamos paginación en lugar de get() para que no se rompa si el cliente tiene 500 cotizaciones
+        $quotations = $customer->quotations()->latest()->paginate(15);
 
         return view('quotations.index', compact('quotations'));
     }
@@ -79,18 +100,20 @@ class QuotationController extends Controller
     }
 
     /**
-     * Nuevo método para descargar archivos de forma segura
+     * Nuevo método para descargar archivos usando Spatie
      */
-    public function downloadAttachment(Quotation $quotation, string $filename)
+    public function downloadAttachment(Quotation $quotation, Media $media)
     {
         $this->authorize('view', $quotation);
 
-        $path = 'quotations/' . $filename;
+        // Validamos que el archivo realmente le pertenezca a esta cotización
+        abort_unless(
+            $media->model_id === $quotation->id && 
+            $media->model_type === Quotation::class && 
+            $media->collection_name === 'quotation_files',
+            404
+        );
 
-        if (!Storage::disk('local')->exists($path)) {
-            abort(404);
-        }
-
-        return response()->download(Storage::disk('local')->path($path));
+        return $media; // Spatie maneja la descarga automáticamente al retornar el modelo
     }
 }

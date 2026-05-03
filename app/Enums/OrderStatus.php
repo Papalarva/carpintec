@@ -2,26 +2,38 @@
 
 namespace App\Enums;
 
-enum OrderStatus: int
+enum OrderStatus: int 
 {
-    case PENDING = 1;
-    case CONFIRMED = 2;
-    case PROCESSING = 3;
-    case SHIPPED = 4;
-    case DELIVERED = 5;
-    case CANCELLED = 6;
-    case REFUNDED = 7;
+    case PENDING    = 1;
+    case PROCESSING = 2;
+    case SHIPPED    = 3;
+    case DELIVERED  = 4;
+    case CANCELLED  = 5;
+    case RETURNED   = 6;
 
+    // 1. Método para el texto en español exacto de la BD
     public function label(): string
     {
         return match ($this) {
             self::PENDING    => 'Pendiente',
-            self::CONFIRMED  => 'Confirmada',
-            self::PROCESSING => 'En proceso',
-            self::SHIPPED    => 'Enviada',
-            self::DELIVERED  => 'Entregada',
-            self::CANCELLED  => 'Cancelada',
-            self::REFUNDED   => 'Reembolsada',
+            self::PROCESSING => 'Procesando',
+            self::SHIPPED    => 'En camino',
+            self::DELIVERED  => 'Entregado',
+            self::CANCELLED  => 'Cancelado',
+            self::RETURNED   => 'Devuelto',
+        };
+    }
+
+    // 2. Método para los colores del Badge
+    public function color(): string
+    {
+        return match ($this) {
+            self::PENDING    => 'yellow',
+            self::PROCESSING => 'blue',
+            self::SHIPPED    => 'purple',
+            self::DELIVERED  => 'green',
+            self::CANCELLED  => 'red',
+            self::RETURNED   => 'gray',
         };
     }
 }

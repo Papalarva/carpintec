@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderStatusHistory extends Model
 {
-    use HasFactory;
+    use HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table = 'order_status_history';
+    
+    // Apagamos los timestamps de Laravel
     public $timestamps = false;
 
     protected $fillable = [
@@ -23,20 +23,17 @@ class OrderStatusHistory extends Model
     ];
 
     protected $casts = [
-        'changed_at' => 'datetime',
+        'status_id'  => \App\Enums\OrderStatus::class, // Convierte el número al Enum
+        'changed_at' => 'datetime',                    // Convierte la fecha a Carbon
     ];
 
-    public function order(): BelongsTo
+    // Relaciones
+    public function order()
     {
         return $this->belongsTo(Order::class);
     }
 
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(OrderStatus::class, 'status_id');
-    }
-
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }

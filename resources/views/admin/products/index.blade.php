@@ -43,14 +43,16 @@
             <td class="px-6 py-4 text-sm">
                 @if(!$product->trashed())
                     <a href="{{ route('admin.products.edit', $product) }}" class="text-indigo-600 hover:underline">Editar</a>
-                    <button onclick="confirmDelete('{{ $product->id }}')" class="text-red-600 hover:underline ml-2">Eliminar</button>
+                    <!-- Solución: Pasamos la URL generada por Blade directamente al JS -->
+                    <button onclick="confirmDelete('{{ route('admin.products.destroy', $product) }}')" class="text-red-600 hover:underline ml-2">Eliminar</button>
                 @else
                     <form method="POST" action="{{ route('admin.products.restore', $product->id) }}" class="inline">
                         @csrf
                         <button class="text-green-600 hover:underline">Restaurar</button>
                     </form>
                     <span class="mx-1">|</span>
-                    <button onclick="confirmForceDelete('{{ $product->id }}')" class="text-red-600 hover:underline">Eliminar def.</button>
+                    <!-- Solución: Igual aquí, pasamos la URL completa -->
+                    <button onclick="confirmForceDelete('{{ route('admin.products.force-delete', $product->id) }}')" class="text-red-600 hover:underline">Eliminar def.</button>
                 @endif
             </td>
         </tr>
@@ -82,12 +84,13 @@
 </x-admin.modal>
 
 <script>
-function confirmDelete(id) {
-    document.getElementById('delete-form').action = '/admin/products/' + id;
+// El script ahora recibe la URL completa (url) en lugar del (id)
+function confirmDelete(url) {
+    document.getElementById('delete-form').action = url;
     document.getElementById('delete-modal').classList.remove('hidden');
 }
-function confirmForceDelete(id) {
-    document.getElementById('force-delete-form').action = '/admin/products/' + id + '/force-delete';
+function confirmForceDelete(url) {
+    document.getElementById('force-delete-form').action = url;
     document.getElementById('force-delete-modal').classList.remove('hidden');
 }
 function closeModal() {

@@ -56,7 +56,7 @@ class RolesAndAdminSeeder extends Seeder
             'password'          => Hash::make('password'), // cambiar en producción
             'email_verified_at' => now(),
         ]);
-
+        
         $adminRoleId = DB::table('roles')->where('name', 'admin')->value('id');
 
         DB::table('model_has_roles')->insert([

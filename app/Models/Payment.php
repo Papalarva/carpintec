@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\PaymentStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    use HasFactory;
-
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'order_id',
@@ -23,18 +21,14 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
-        'mp_data' => 'array',
-        'paid_at' => 'datetime',
+        'status_id' => PaymentStatus::class,
+        'amount'    => 'decimal:2',
+        'mp_data'   => 'array',
+        'paid_at'   => 'datetime',
     ];
 
-    public function order(): BelongsTo
+    public function order()
     {
         return $this->belongsTo(Order::class);
-    }
-
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(PaymentStatus::class, 'status_id');
     }
 }

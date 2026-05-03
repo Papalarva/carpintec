@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Shipment extends Model
 {
-    use HasFactory;
-
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'address_id',
@@ -26,12 +23,12 @@ class Shipment extends Model
     ];
 
     protected $casts = [
-        'cost' => 'decimal:2',
-        'api_response' => 'array',
+        'cost'             => 'decimal:2',
+        'api_response'     => 'array',
         'estimated_delivery_date' => 'date',
     ];
 
-    public function address(): BelongsTo
+    public function address()
     {
         return $this->belongsTo(Address::class);
     }

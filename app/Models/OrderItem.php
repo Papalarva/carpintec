@@ -2,17 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderItem extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = false; // solo created_at
+    public $timestamps = false; // (Si tu tabla no tiene updated_at)
 
     protected $fillable = [
         'order_id',
@@ -20,26 +18,25 @@ class OrderItem extends Model
         'quantity',
         'unit_price',
         'unit_discount',
-        'inventory_movement_id',
+        'inventory_movement_id', // <-- ¡Asegúrate de que esta línea exista!
     ];
 
     protected $casts = [
-        'unit_price' => 'decimal:2',
+        'unit_price'    => 'decimal:2',
         'unit_discount' => 'decimal:2',
-        'created_at' => 'datetime',
     ];
 
-    public function order(): BelongsTo
+    public function order()
     {
         return $this->belongsTo(Order::class);
     }
 
-    public function product(): BelongsTo
+    public function product()
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function inventoryMovement(): BelongsTo
+    public function inventoryMovement()
     {
         return $this->belongsTo(InventoryMovement::class);
     }

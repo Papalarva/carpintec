@@ -1,33 +1,39 @@
 <?php
+
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids; // <-- Vital para UUIDs
+use App\Enums\QuotationStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Quotation extends Model
+class Quotation extends Model implements HasMedia
 {
-    use HasFactory, HasUuids; // <-- Añadido
+    use HasFactory, HasUuids, InteractsWithMedia;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table = 'quotations';
 
     protected $fillable = [
         'customer_id',
-        'product_id', // <-- Agregado para saber qué mueble inspiró la cotización
+        'product_id',
         'subject',
         'description',
-        'attachments',
-        'status',
         'estimated_price',
         'response',
+        'status',
     ];
 
     protected $casts = [
-        'attachments' => 'array',
+        'status'          => QuotationStatus::class,
         'estimated_price' => 'decimal:2',
+        'attachments'     => 'json', // ignoraremos en la lógica, pero mantenemos el cast por si acaso
     ];
 
+    // ──────────────────────
+    // Relaciones
+    // ──────────────────────
     public function customer()
     {
         return $this->belongsTo(Customer::class);
@@ -38,7 +44,25 @@ class Quotation extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Comprobación de estado para la UI y validaciones futuras
-    public function isPending(): bool { return $this->status === 'pending'; }
-    public function isQuoted(): bool { return $this->status === 'quoted'; }
+    public function order()
+    {
+        return $this->hasOne(Order::class);
+    }
+
+    // ──────────────────────
+    // Media Library
+    // ──────────────────────
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('quotation_files')
+             ->useDisk('local'); // privado, como exige la regla
+    }
+
+    // ──────────────────────
+    // Scopes útiles
+    // ──────────────────────
+    public function scopePending($query)
+    {
+        return $query->where('status', QuotationStatus::PENDING);
+    }
 }

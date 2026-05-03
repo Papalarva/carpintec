@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    use HasFactory;
-
-    public $incrementing = false;
-    protected $keyType = 'string';
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'customer_id',
@@ -29,53 +26,49 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'subtotal' => 'decimal:2',
+        'status_id'      => OrderStatus::class,
+        'subtotal'       => 'decimal:2',
         'discount_total' => 'decimal:2',
-        'shipping_cost' => 'decimal:2',
-        'total' => 'decimal:2',
+        'shipping_cost'  => 'decimal:2',
+        'total'          => 'decimal:2',
     ];
 
-    public function customer(): BelongsTo
+    public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function shippingAddress(): BelongsTo
+    public function shippingAddress()
     {
         return $this->belongsTo(Address::class, 'shipping_address_id');
     }
 
-    public function shipment(): BelongsTo
+    public function shipment()
     {
         return $this->belongsTo(Shipment::class);
     }
 
-    public function quotation(): BelongsTo
+    public function quotation()
     {
         return $this->belongsTo(Quotation::class);
     }
 
-    public function coupon(): BelongsTo
+    public function coupon()
     {
         return $this->belongsTo(Coupon::class);
     }
 
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(OrderStatus::class, 'status_id');
-    }
-
-    public function items(): HasMany
+    public function items()
     {
         return $this->hasMany(OrderItem::class);
     }
 
-    public function payments(): HasMany
+    public function payments()
     {
         return $this->hasMany(Payment::class);
     }
 
-    public function statusHistory(): HasMany
+    public function statusHistory()
     {
         return $this->hasMany(OrderStatusHistory::class);
     }

@@ -2,17 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\DiscountType;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Discount extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
+    protected $table = 'discounts';
 
     protected $fillable = [
         'name',
@@ -25,42 +24,30 @@ class Discount extends Model
     ];
 
     protected $casts = [
-        'value' => 'decimal:2',
-        'starts_at' => 'datetime',
-        'ends_at' => 'datetime',
-        'is_active' => 'boolean',
+        'type'       => DiscountType::class,
+        'value'      => 'decimal:2',
+        'starts_at'  => 'datetime',
+        'ends_at'    => 'datetime',
+        'is_active'  => 'boolean',
     ];
 
-    public function products(): BelongsToMany
+    public function products()
     {
-        return $this->belongsToMany(Product::class, 'discount_product');
+        return $this->belongsToMany(Product::class, 'discount_product', 'discount_id', 'product_id');
     }
 
-    public function categories(): BelongsToMany
+    public function categories()
     {
-        return $this->belongsToMany(Category::class, 'discount_category');
+        return $this->belongsToMany(Category::class, 'discount_category', 'discount_id', 'category_id');
     }
 
-    public function customers(): BelongsToMany
+    public function customers()
     {
-        return $this->belongsToMany(Customer::class, 'discount_customer');
+        return $this->belongsToMany(Customer::class, 'discount_customer', 'discount_id', 'customer_id');
     }
 
-    public function coupons(): HasMany
+    public function coupons()
     {
         return $this->hasMany(Coupon::class);
-    }
-
-    // Scopes útiles para verificar vigencia
-    public function scopeActive($query)
-    {
-        $now = now();
-        return $query->where('is_active', true)
-                     ->where(function ($q) use ($now) {
-                         $q->whereNull('starts_at')->orWhere('starts_at', '<=', $now);
-                     })
-                     ->where(function ($q) use ($now) {
-                         $q->whereNull('ends_at')->orWhere('ends_at', '>=', $now);
-                     });
     }
 }

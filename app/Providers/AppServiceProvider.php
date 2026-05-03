@@ -6,7 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use App\Services\CartManager;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Database\Eloquent\Relations\Relation; // <-- 1. Importamos Relation
+use Illuminate\Database\Eloquent\Relations\Relation; // <-- 1. Importamos Relation 
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -29,14 +29,21 @@ class AppServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             'User' => \App\Models\User::class,
             'Product' => \App\Models\Product::class,
+            'Quotation' => \App\Models\Quotation::class, 
         ]);
 
         // Enseñamos a Blade a entender @role y @endrole
         Blade::if('role', function (string|array $roles) {
-            /** @var mixed $user */
             $user = Auth::user();
-
-            return $user !== null && method_exists($user, 'hasRole') && $user->hasRole($roles);
+            return $user !== null && method_exists($user, 'hasRole') && call_user_func([$user, 'hasRole'], $roles);
         });
+
+    }
+
+    public function hasRole($roles): bool
+    {
+        $user = Auth::user();
+
+        return $user !== null && method_exists($user, 'hasRole') && call_user_func([$user, 'hasRole'], $roles);
     }
 }

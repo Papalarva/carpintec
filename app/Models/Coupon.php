@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Coupon extends Model
 {
-    use HasFactory;
+    use HasFactory, HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
-    public $timestamps = false; // solo created_at
+    protected $table = 'coupons';
+
+    // 👇 LA CORRECCIÓN: Dejamos que Laravel llene created_at, pero ignoramos updated_at
+    const UPDATED_AT = null;
 
     protected $fillable = [
         'code',
@@ -23,11 +24,12 @@ class Coupon extends Model
     ];
 
     protected $casts = [
+        'max_uses'   => 'integer',
+        'used_count' => 'integer',
         'expires_at' => 'datetime',
-        'created_at' => 'datetime',
     ];
 
-    public function discount(): BelongsTo
+    public function discount()
     {
         return $this->belongsTo(Discount::class);
     }

@@ -9,11 +9,11 @@ class Inventory extends Model
 {
     use HasFactory;
 
+    const CREATED_AT = null;
     protected $primaryKey = 'product_id';
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $table = 'inventory'; // ← ¡esto es clave!
-
+    protected $table = 'inventory'; 
     protected $fillable = [
         'product_id',
         'quantity',

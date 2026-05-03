@@ -55,4 +55,10 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Customer::class);
     }
 
+    public function hasRole(string|array $roles): bool
+    {
+        $roles = (array) $roles;
+        return $this->roles()->whereIn('name', $roles)->exists();
+    }
+
 }
