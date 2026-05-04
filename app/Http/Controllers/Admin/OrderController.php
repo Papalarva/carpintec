@@ -166,7 +166,7 @@ class OrderController extends Controller
                     'quantity'          => -$item->quantity, // negativo = salida
                     'resulting_quantity' => $newQuantity,
                     'reference'         => "Pedido #{$order->id}",
-                    'user_id'           => auth()->id(),
+                    'user_id'           => Auth::id(),
                 ]);
 
                 // Actualizar stock
@@ -204,7 +204,7 @@ class OrderController extends Controller
                     'quantity'          => $item->quantity,
                     'resulting_quantity' => $newQuantity,
                     'reference'         => "Cancelación Pedido #{$order->id}",
-                    'user_id'           => auth()->id(),
+                    'user_id'           => Auth::id(),
                 ]);
 
                 $inventory->update(['quantity' => $newQuantity]);

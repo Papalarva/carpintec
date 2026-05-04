@@ -8,12 +8,6 @@ use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 use App\Models\Order;
 use Illuminate\Http\Request;
-use App\Http\Controllers\Admin\OrderController;
-use App\Http\Controllers\Admin\InventoryController;
-use App\Http\Controllers\Admin\ReportController;
-use App\Http\Controllers\Admin\DiscountController;
-use App\Http\Controllers\Admin\CouponController;
-
 
 // ─── Controladores Públicos ─────────────────────────────
 use App\Http\Controllers\QuotationController;
@@ -24,16 +18,26 @@ use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\Admin\QuotationController as AdminQuotationController; // EL ALIAS CLAVE
+use App\Http\Controllers\Admin\QuotationController as AdminQuotationController;
+use App\Http\Controllers\Admin\OrderController;
+use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\DiscountController;
+use App\Http\Controllers\Admin\CouponController;
+use App\Http\Controllers\Auth\TwoFactorController;
+ 
+// ─── Página principal (Tienda / Catálogo) ───────────────
+Route::get('/', [CatalogController::class, 'index'])->name('home');
 
-// ─── Páginas estáticas ──────────────────────────────────
-Route::get('/', function () {
-    return view('welcome');
-});
-
-// ─── Dashboard Cliente (Breeze) ─────────────────────────
+// ─── TÚNEL DE REDIRECCIÓN INTELIGENTE (Soluciona el error de Breeze) ───
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    // Si es un empleado, lo mandamos a su panel de control
+    if (auth()->check() && auth()->user()->hasAnyRole(['admin', 'worker'])) {
+        return redirect()->route('admin.dashboard');
+    }
+    
+    // Si es un cliente normal, lo mandamos a la tienda
+    return redirect()->route('home');
 })->middleware(['auth'])->name('dashboard');
 
 // ─── Perfil (Breeze) ────────────────────────────────────
@@ -72,51 +76,55 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cotizaciones/{quotation}/adjunto/{filename}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
 });
 
-// ─── RUTAS DE ADMINISTRACIÓN ────────────────────────────
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,worker'])->group(function () {
-
-    // Dashboard Admin
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-
-    // Categorías y productos (trabajadores y admin)
+// ==========================================
+// 🔓 ZONA COMPARTIDA: ADMINS Y WORKERS
+// ==========================================
+// Cambia el pipe (|) por una coma (,)
+Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin,worker']], function () {    
+    // El dashboard de admin debe estar aquí para que el worker tenga a dónde entrar
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
     Route::resource('categories', CategoryController::class);
     Route::resource('products', ProductController::class);
+    Route::resource('quotations', AdminQuotationController::class); // ¡Corregido!
+    Route::resource('orders', OrderController::class);
+});
 
-    // Productos - rutas adicionales (soft deletes)
-    Route::post('products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
-    Route::delete('products/{id}/force-delete', [ProductController::class, 'forceDelete'])->name('products.force-delete');
+// ==========================================
+// 🔒 ZONA EXCLUSIVA: SOLO ADMINS
+// ==========================================
+Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin']], function () {
+    
+    // Rutas de administración que faltaban
+    Route::resource('users', UserController::class);
+    Route::resource('roles', RoleController::class);
 
-    // Rutas exclusivas para admin
-    Route::middleware('role:admin')->group(function () {
-        Route::resource('users', UserController::class)->only(['index', 'edit', 'update']);
-        Route::resource('roles', RoleController::class)->except(['show']);
+    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('inventory/{product}/movements', [InventoryController::class, 'showMovements'])->name('inventory.movements');
+    Route::get('inventory/{product}/adjust', [InventoryController::class, 'createAdjustment'])->name('inventory.adjust');
+    Route::post('inventory/{product}/adjust', [InventoryController::class, 'storeAdjustment'])->name('inventory.store-adjustment');
 
-        // 🚀 AHORA SÍ USAMOS EL ALIAS DEL ADMIN AQUÍ ABAJO
-        Route::resource('quotations', AdminQuotationController::class)->only(['index', 'show']);
-        Route::put('quotations/{quotation}/update-status', [AdminQuotationController::class, 'updateStatus'])->name('quotations.update-status');
-        Route::post('quotations/{quotation}/convert-to-order', [AdminQuotationController::class, 'convertToOrder'])->name('quotations.convert-to-order');
-        Route::get('quotations/{quotation}/file/{media}', [AdminQuotationController::class, 'downloadFile'])->name('quotations.download-file');
+    Route::resource('discounts', DiscountController::class);
+    Route::resource('coupons', CouponController::class);
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    
+});
 
-        Route::resource('orders', OrderController::class)->only(['index', 'show']);
-        Route::put('orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
-        Route::put('orders/{order}/update-shipment', [OrderController::class, 'updateShipment'])->name('orders.update-shipment');
-        Route::put('orders/{order}/payments/{payment}/approve', [OrderController::class, 'approvePayment'])->name('orders.approve-payment');
+// ─── Verificación 2FA (Requiere estar logueado pero no verificado aún) ───
+Route::middleware(['auth'])->group(function () {
+    Route::get('/2fa', [TwoFactorController::class, 'index'])->name('2fa.index');
+    Route::post('/2fa', [TwoFactorController::class, 'verify'])->name('2fa.verify');
+});
 
-        // Inventario
-        Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
-        Route::get('inventory/{product}/movements', [InventoryController::class, 'showMovements'])->name('inventory.movements');
-        Route::get('inventory/{product}/adjust', [InventoryController::class, 'createAdjustment'])->name('inventory.adjust');
-        Route::post('inventory/{product}/adjust', [InventoryController::class, 'storeAdjustment'])->name('inventory.store-adjustment');
-
-        // Descuentos
-        Route::resource('discounts', DiscountController::class);
-
-        // Cupones
-        Route::resource('coupons', CouponController::class);
-
-        // Reportes
-        Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
-    });
+// ─── Pruebas ────────────────────────────────────────────
+Route::get('/test-mail', function () {
+    \Illuminate\Support\Facades\Mail::raw(
+        '¡Hola! Conexión Mailtrap funciona.', 
+        function ($message) {
+            $message->to('prueba@carpintec.local')->subject('Prueba de Conexión');
+        }
+    );
+    return 'Revisa tu bandeja.';
 });
 
 // ─── Rutas de autenticación (Breeze) ────────────────────
