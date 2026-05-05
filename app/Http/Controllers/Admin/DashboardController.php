@@ -1,86 +1,71 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Quotation;
+use App\Models\User;
+use App\Models\Inventory; 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use App\Models\Customer;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $totalOrders = DB::table('orders')->count();
+        $user = auth()->user();
 
-        $totalRevenue = DB::table('orders')
-            ->join('order_statuses', 'orders.status_id', '=', 'order_statuses.id')
-            ->whereNotIn('order_statuses.name', ['CANCELLED', 'REFUNDED'])
-            ->sum('total');
+        // 👑 ZONA DEL ADMINISTRADOR (Analítica y Finanzas)
+        if ($user->hasRole('admin')) {
+            
+            // 1. Consultas Reales a tu Base de Datos:
+            $totalRevenue = Order::sum('total') ?? 0;
+            $totalOrders = Order::count();
+            
+            // Nuevos clientes registrados en el mes actual
+            $newCustomersThisMonth = Customer::whereMonth('created_at', now()->month)->count();
 
-        $newCustomersThisMonth = DB::table('customers')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
+            $pendingQuotations = Quotation::where('status', 'pending')->count();
+            $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
+                           ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
+                           ->count();
 
-        $pendingQuotations = DB::table('quotations')
-            ->where('status', 'pending')
-            ->count();
+            // 2. Configuración temporal para el componente de la gráfica
+            // (En el futuro esto vendrá de un query agrupado por fechas)
+            $salesChartConfig = [
+                'labels' => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                'data' => [12000, 19000, 15000, 22000, 18000, 25000],
+            ];
 
-        $lowStockProducts = DB::table('inventory')
-            ->whereColumn('quantity', '<', 'min_quantity')
-            ->count();
-
-        // Ventas de los últimos 6 meses (sin cancelados ni reembolsados)
-        $sales = DB::table('orders')
-            ->join('order_statuses', 'orders.status_id', '=', 'order_statuses.id')
-            ->whereNotIn('order_statuses.name', ['CANCELLED', 'REFUNDED'])
-            ->selectRaw("to_char(orders.created_at, 'YYYY-MM') as month, sum(orders.total) as revenue")
-            ->where('orders.created_at', '>=', now()->subMonths(6)->startOfMonth())
-            ->groupBy('month')
-            ->orderBy('month')
-            ->pluck('revenue', 'month');
-
-        $labels = [];
-        $data   = [];
-        $start  = now()->subMonths(5)->startOfMonth();
-        for ($i = 0; $i < 6; $i++) {
-            $month    = $start->copy()->addMonths($i)->format('Y-m');
-            $labels[] = $start->copy()->addMonths($i)->translatedFormat('M Y');
-            $data[]   = $sales->get($month, 0);
+            // Retornamos la vista inyectando TODAS las variables
+            return view('admin.dashboard', compact(
+                'totalRevenue',
+                'totalOrders',
+                'newCustomersThisMonth',
+                'pendingQuotations',
+                'lowStockProducts',
+                'salesChartConfig'
+            ));
         }
 
-        $salesChartConfig = [
-            'type' => 'line',
-            'data' => [
-                'labels'   => $labels,
-                'datasets' => [
-                    [
-                        'label'           => 'Ingresos mensuales',
-                        'data'            => $data,
-                        'backgroundColor' => 'rgba(59, 130, 246, 0.2)',
-                        'borderColor'     => 'rgba(59, 130, 246, 1)',
-                        'borderWidth'     => 2,
-                        'tension'         => 0.3,
-                    ],
-                ],
-            ],
-            'options' => [
-                'responsive'          => true,
-                'maintainAspectRatio' => false,
-                'scales'              => [
-                    'y' => [
-                        'beginAtZero' => true,
-                    ],
-                ],
-            ],
-        ];
+        // 👷‍♂️ ZONA DEL WORKER (Operaciones Diarias)
+        if ($user->hasRole('worker')) {
+            
+            // 1. Consultas Ligeras (Solo lo que necesitan para trabajar)
+            $pendingQuotations = Quotation::where('status', 'pending')->count();
+            $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
+                           ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
+                           ->count();
+            
+            // Retornamos la misma vista, pero solo con la data operativa
+            return view('admin.dashboard', compact(
+                'pendingQuotations',
+                'lowStockProducts'
+            ));
+        }
 
-        return view('admin.dashboard', compact(
-            'totalOrders',
-            'totalRevenue',
-            'newCustomersThisMonth',
-            'pendingQuotations',
-            'lowStockProducts',
-            'salesChartConfig'
-        ));
+        // Si por alguna extraña razón un cliente normal logró pasar el middleware
+        return redirect()->route('home');
     }
 }

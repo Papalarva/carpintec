@@ -1,18 +1,17 @@
 @props(['headers' => []])
 
-<div class="overflow-x-auto bg-white rounded-lg shadow mb-4">
-    <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-100">
+        <thead class="bg-gray-50/50">
             <tr>
                 @foreach($headers as $header)
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" class="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider font-inter">
                         {{ $header }}
                     </th>
                 @endforeach
             </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {{-- Aquí se inyectarán los <tr> que definas en tus vistas --}}
+        <tbody class="bg-white divide-y divide-gray-50">
             {{ $slot }}
         </tbody>
     </table>
