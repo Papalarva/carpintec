@@ -1,0 +1,741 @@
+# Contexto de Diseño UI/UX - Lado del Cliente (E-commerce) Proyecto Carpintec
+
+Actúa como un Diseñador UI/UX y Desarrollador Frontend experto en Laravel Blade, Alpine.js y Tailwind CSS. Tu objetivo es crear las vistas públicas de la tienda en línea "Carpintec" (un e-commerce premium de muebles de madera).
+
+## 1. Reglas Visuales y de Marca (El "Esmoquin" de Carpintec)
+- **Tipografía (Doble Familia):** Títulos, encabezados y el logo deben usar **Playfair Display** (`font-serif` o `font-playfair`) para dar un toque de revista europea. Párrafos, descripciones, y **especialmente los números/precios** deben usar **Inter** (`font-sans` o `font-inter`) por su legibilidad y precisión matemática.
+- **Paleta de Colores Pública:** La tienda usa tonos madera y neutrales. El acento principal son los tonos Ámbar/Terracota (`text-amber-700`, `bg-amber-800`). Los fondos principales son blancos o `bg-gray-50`.
+- **Iconografía (Veto de iconos sólidos):** Está estrictamente PROHIBIDO usar iconos sólidos (estilo supermercado). Todos los iconos (carrito, usuario, flechas, etc.) deben ser de línea muy fina (Outline de 1.5px, ej. `stroke-width="1.5"` en los SVG) para mantener una estética de boutique de lujo.
+- **Jerarquía de Botones (Arquitectura Mixta):**
+  - **Botón Primario ("Añadir al carrito" / "Comprar"):** Debe tener peso visual. Usará color sólido (ej. `bg-amber-800 text-white`) que se oscurece al hacer hover (`hover:bg-amber-900`).
+  - **Botón Secundario ("Cotización" / "Ver más"):** Fondo transparente con borde visible (Outline, ej. `border border-amber-800 text-amber-800`). Se oscurece sutilmente en el hover.
+
+## 2. Manejo de Componentes
+El proyecto utiliza los componentes base de Laravel Breeze. 
+- **Regla estricta:** Sustituye cualquier color genérico de Tailwind (como `indigo-500` o `blue-600`) por la paleta Ámbar (`amber-600`, `amber-700`, `amber-800`).
+
+## 3. La Estructura Base (El Layout por Componente)
+Tu layout público se llama `app.blade.php` y utiliza slots (`{{ $slot }}`). Por lo tanto, NO DEBES USAR `@extends`. 
+Toda vista nueva para el cliente debe estructurarse exactamente así:
+
+<x-app-layout>
+    <x-slot name="header">
+        <h2 class="font-serif font-semibold text-2xl text-gray-800 leading-tight">
+            {{ __('Título de la Página') }}
+        </h2>
+    </x-slot>
+
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
+                </div>
+        </div>
+    </div>
+</x-app-layout>
+
+## 4. Interactividad Exclusiva con Alpine.js
+El layout principal incluye Alpine.js. Toda la interactividad del frontend (ventanas modales emergentes, menús desplegables, acordeones, cambio de imágenes en la galería de productos, notificaciones dinámicas) **DEBE estar construida con Alpine.js** (`x-data`, `x-show`, `@click`, etc.). No escribas scripts de Vanilla JavaScript (`document.getElementById...`) a menos que sea estrictamente necesario para una librería externa de terceros.
+
+## 5. Patrones Visuales de la Tienda (E-commerce)
+- **Proporción de Imágenes (El Cuadrado Perfecto):** Todas las imágenes de los productos deben estar contenidas en un contenedor con proporción `aspect-square`. Para evitar que los muebles se vean desproporcionadamente grandes, las rejillas (grids) deben tener un espacio en blanco generoso entre tarjetas (ej. `gap-8` o `gap-12`) y un límite de ancho máximo.
+- **Tarjetas de Producto:** Imagen cuadrada (`aspect-square object-cover`) arriba, título elegante en Playfair, precio en Inter y el Botón Primario sólido.
+- **Responsividad:** Todas las vistas deben ser `mobile-first`.
+
+## 6. Base de Datos (Estructura)
+-- DROP SCHEMA public;
+
+CREATE SCHEMA public AUTHORIZATION postgres;
+
+-- DROP SEQUENCE public.migrations_id_seq;
+
+CREATE SEQUENCE public.migrations_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+-- DROP SEQUENCE public.two_factor_codes_id_seq;
+
+CREATE SEQUENCE public.two_factor_codes_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;-- public.discounts definition
+
+-- Drop table
+
+-- DROP TABLE public.discounts;
+
+CREATE TABLE public.discounts ( id uuid DEFAULT gen_random_uuid() NOT NULL, "name" text NOT NULL, "type" text NOT NULL, value numeric(12, 2) NOT NULL, starts_at timestamptz NULL, ends_at timestamptz NULL, is_active bool DEFAULT true NULL, applies_to text NOT NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT discounts_pkey PRIMARY KEY (id));
+
+
+-- public.media definition
+
+-- Drop table
+
+-- DROP TABLE public.media;
+
+CREATE TABLE public.media ( id uuid DEFAULT gen_random_uuid() NOT NULL, model_type varchar(255) NOT NULL, model_id uuid NOT NULL, "uuid" uuid NULL, collection_name varchar(255) NOT NULL, "name" varchar(255) NOT NULL, file_name varchar(255) NOT NULL, mime_type varchar(255) NULL, disk varchar(255) NOT NULL, conversions_disk varchar(255) NULL, "size" int8 NOT NULL, manipulations json DEFAULT '{}'::json NOT NULL, custom_properties json DEFAULT '{}'::json NOT NULL, generated_conversions json DEFAULT '{}'::json NOT NULL, responsive_images json DEFAULT '{}'::json NOT NULL, order_column int4 NULL, created_at timestamp(0) NULL, updated_at timestamp(0) NULL, CONSTRAINT media_pkey PRIMARY KEY (id));
+CREATE INDEX media_model_type_model_id_index ON public.media USING btree (model_type, model_id);
+
+
+-- public.migrations definition
+
+-- Drop table
+
+-- DROP TABLE public.migrations;
+
+CREATE TABLE public.migrations ( id serial4 NOT NULL, migration varchar(255) NOT NULL, batch int4 NOT NULL, CONSTRAINT migrations_pkey PRIMARY KEY (id));
+
+
+-- public.order_statuses definition
+
+-- Drop table
+
+-- DROP TABLE public.order_statuses;
+
+CREATE TABLE public.order_statuses ( id int2 NOT NULL, "name" text NOT NULL, CONSTRAINT order_statuses_name_key UNIQUE (name), CONSTRAINT order_statuses_pkey PRIMARY KEY (id));
+
+
+-- public.payment_statuses definition
+
+-- Drop table
+
+-- DROP TABLE public.payment_statuses;
+
+CREATE TABLE public.payment_statuses ( id int2 NOT NULL, "name" text NOT NULL, CONSTRAINT payment_statuses_name_key UNIQUE (name), CONSTRAINT payment_statuses_pkey PRIMARY KEY (id));
+
+
+-- public.roles definition
+
+-- Drop table
+
+-- DROP TABLE public.roles;
+
+CREATE TABLE public.roles ( id uuid DEFAULT gen_random_uuid() NOT NULL, "name" text NOT NULL, description text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT roles_name_key UNIQUE (name), CONSTRAINT roles_pkey PRIMARY KEY (id));
+
+
+-- public.users definition
+
+-- Drop table
+
+-- DROP TABLE public.users;
+
+CREATE TABLE public.users ( id uuid DEFAULT gen_random_uuid() NOT NULL, email text NOT NULL, "password" text NOT NULL, first_name text NOT NULL, last_name text NOT NULL, phone text NULL, email_verified_at timestamptz NULL, remember_token text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamptz NULL, CONSTRAINT users_email_key UNIQUE (email), CONSTRAINT users_pkey PRIMARY KEY (id));
+
+
+-- public.categories definition
+
+-- Drop table
+
+-- DROP TABLE public.categories;
+
+CREATE TABLE public.categories ( id uuid DEFAULT gen_random_uuid() NOT NULL, "name" text NOT NULL, slug text NOT NULL, description text NULL, parent_id uuid NULL, sort_order int4 DEFAULT 0 NULL, is_active bool DEFAULT true NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamp(0) NULL, CONSTRAINT categories_pkey PRIMARY KEY (id), CONSTRAINT categories_slug_key UNIQUE (slug), CONSTRAINT categories_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.categories(id) ON DELETE SET NULL);
+
+
+-- public.coupons definition
+
+-- Drop table
+
+-- DROP TABLE public.coupons;
+
+CREATE TABLE public.coupons ( id uuid DEFAULT gen_random_uuid() NOT NULL, code text NOT NULL, discount_id uuid NOT NULL, max_uses int4 NULL, used_count int4 DEFAULT 0 NOT NULL, expires_at timestamptz NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT coupons_code_key UNIQUE (code), CONSTRAINT coupons_pkey PRIMARY KEY (id), CONSTRAINT coupons_discount_id_fkey FOREIGN KEY (discount_id) REFERENCES public.discounts(id));
+
+
+-- public.customers definition
+
+-- Drop table
+
+-- DROP TABLE public.customers;
+
+CREATE TABLE public.customers ( id uuid DEFAULT gen_random_uuid() NOT NULL, user_id uuid NOT NULL, birth_date date NULL, accepts_marketing bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT customers_pkey PRIMARY KEY (id), CONSTRAINT customers_user_id_key UNIQUE (user_id), CONSTRAINT customers_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE);
+
+
+-- public.discount_category definition
+
+-- Drop table
+
+-- DROP TABLE public.discount_category;
+
+CREATE TABLE public.discount_category ( discount_id uuid NOT NULL, category_id uuid NOT NULL, CONSTRAINT discount_category_pkey PRIMARY KEY (discount_id, category_id), CONSTRAINT discount_category_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE, CONSTRAINT discount_category_discount_id_fkey FOREIGN KEY (discount_id) REFERENCES public.discounts(id) ON DELETE CASCADE);
+
+
+-- public.discount_customer definition
+
+-- Drop table
+
+-- DROP TABLE public.discount_customer;
+
+CREATE TABLE public.discount_customer ( discount_id uuid NOT NULL, customer_id uuid NOT NULL, CONSTRAINT discount_customer_pkey PRIMARY KEY (discount_id, customer_id), CONSTRAINT discount_customer_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE CASCADE, CONSTRAINT discount_customer_discount_id_fkey FOREIGN KEY (discount_id) REFERENCES public.discounts(id) ON DELETE CASCADE);
+
+
+-- public.model_has_roles definition
+
+-- Drop table
+
+-- DROP TABLE public.model_has_roles;
+
+CREATE TABLE public.model_has_roles ( role_id uuid NOT NULL, model_type text NOT NULL, model_id uuid NOT NULL, CONSTRAINT model_has_roles_pkey PRIMARY KEY (role_id, model_type, model_id), CONSTRAINT model_has_roles_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.roles(id) ON DELETE CASCADE);
+
+
+-- public.products definition
+
+-- Drop table
+
+-- DROP TABLE public.products;
+
+CREATE TABLE public.products ( id uuid DEFAULT gen_random_uuid() NOT NULL, category_id uuid NOT NULL, track_inventory bool DEFAULT true NOT NULL, sku text NOT NULL, "name" text NOT NULL, slug text NOT NULL, short_description text NULL, long_description text NULL, materials text NULL, dimensions text NULL, weight_kg numeric(8, 2) NULL, price numeric(12, 2) NOT NULL, "cost" numeric(12, 2) NULL, is_active bool DEFAULT true NULL, is_customizable bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamptz NULL, CONSTRAINT products_pkey PRIMARY KEY (id), CONSTRAINT products_sku_key UNIQUE (sku), CONSTRAINT products_slug_key UNIQUE (slug), CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id));
+
+
+-- public.quotations definition
+
+-- Drop table
+
+-- DROP TABLE public.quotations;
+
+CREATE TABLE public.quotations ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, product_id uuid NULL, subject text NOT NULL, description text NOT NULL, attachments jsonb NULL, status text DEFAULT 'pending'::text NOT NULL, estimated_price numeric(12, 2) NULL, response text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT quotations_pkey PRIMARY KEY (id), CONSTRAINT quotations_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id), CONSTRAINT quotations_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE SET NULL);
+
+
+-- public.two_factor_codes definition
+
+-- Drop table
+
+-- DROP TABLE public.two_factor_codes;
+
+CREATE TABLE public.two_factor_codes ( id bigserial NOT NULL, user_id uuid NOT NULL, code varchar(6) NOT NULL, expires_at timestamp(0) NOT NULL, created_at timestamp(0) NULL, updated_at timestamp(0) NULL, CONSTRAINT two_factor_codes_pkey PRIMARY KEY (id), CONSTRAINT two_factor_codes_user_id_foreign FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE);
+
+
+-- public.addresses definition
+
+-- Drop table
+
+-- DROP TABLE public.addresses;
+
+CREATE TABLE public.addresses ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, alias text NULL, street text NOT NULL, exterior_number text NOT NULL, interior_number text NULL, neighborhood text NOT NULL, city text NOT NULL, state text NOT NULL, postal_code text NOT NULL, country text DEFAULT 'México'::text NOT NULL, contact_phone text NULL, is_primary bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT addresses_pkey PRIMARY KEY (id), CONSTRAINT addresses_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE CASCADE);
+
+
+-- public.carts definition
+
+-- Drop table
+
+-- DROP TABLE public.carts;
+
+CREATE TABLE public.carts ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT carts_customer_id_key UNIQUE (customer_id), CONSTRAINT carts_pkey PRIMARY KEY (id), CONSTRAINT carts_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE CASCADE);
+
+
+-- public.discount_product definition
+
+-- Drop table
+
+-- DROP TABLE public.discount_product;
+
+CREATE TABLE public.discount_product ( discount_id uuid NOT NULL, product_id uuid NOT NULL, CONSTRAINT discount_product_pkey PRIMARY KEY (discount_id, product_id), CONSTRAINT discount_product_discount_id_fkey FOREIGN KEY (discount_id) REFERENCES public.discounts(id) ON DELETE CASCADE, CONSTRAINT discount_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE);
+
+
+-- public.inventory definition
+
+-- Drop table
+
+-- DROP TABLE public.inventory;
+
+CREATE TABLE public.inventory ( product_id uuid NOT NULL, quantity int4 DEFAULT 0 NOT NULL, min_quantity int4 DEFAULT 0 NOT NULL, "location" text NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT inventory_pkey PRIMARY KEY (product_id), CONSTRAINT inventory_quantity_check CHECK ((quantity >= 0)), CONSTRAINT inventory_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE);
+
+
+-- public.inventory_movements definition
+
+-- Drop table
+
+-- DROP TABLE public.inventory_movements;
+
+CREATE TABLE public.inventory_movements ( id uuid DEFAULT gen_random_uuid() NOT NULL, product_id uuid NOT NULL, movement_type text NOT NULL, quantity int4 NOT NULL, resulting_quantity int4 NOT NULL, reference text NULL, user_id uuid NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT inventory_movements_pkey PRIMARY KEY (id), CONSTRAINT inventory_movements_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id), CONSTRAINT inventory_movements_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id));
+
+
+-- public.product_images definition
+
+-- Drop table
+
+-- DROP TABLE public.product_images;
+
+CREATE TABLE public.product_images ( id uuid DEFAULT gen_random_uuid() NOT NULL, product_id uuid NOT NULL, webp_path text NOT NULL, sort_order int4 DEFAULT 0 NULL, is_cover bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT product_images_pkey PRIMARY KEY (id), CONSTRAINT product_images_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE);
+
+
+-- public.shipments definition
+
+-- Drop table
+
+-- DROP TABLE public.shipments;
+
+CREATE TABLE public.shipments ( id uuid DEFAULT gen_random_uuid() NOT NULL, address_id uuid NOT NULL, shipping_method text NOT NULL, carrier text NULL, "cost" numeric(10, 2) NULL, tracking_number text NULL, label_url text NULL, status text DEFAULT 'pending'::text NOT NULL, api_response jsonb NULL, estimated_delivery_date date NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT shipments_pkey PRIMARY KEY (id), CONSTRAINT shipments_address_id_fkey FOREIGN KEY (address_id) REFERENCES public.addresses(id));
+
+
+-- public.cart_items definition
+
+-- Drop table
+
+-- DROP TABLE public.cart_items;
+
+CREATE TABLE public.cart_items ( id uuid DEFAULT gen_random_uuid() NOT NULL, cart_id uuid NOT NULL, product_id uuid NOT NULL, quantity int4 NOT NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT cart_items_cart_id_product_id_key UNIQUE (cart_id, product_id), CONSTRAINT cart_items_pkey PRIMARY KEY (id), CONSTRAINT cart_items_quantity_check CHECK ((quantity > 0)), CONSTRAINT cart_items_cart_id_fkey FOREIGN KEY (cart_id) REFERENCES public.carts(id) ON DELETE CASCADE, CONSTRAINT cart_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id));
+
+
+-- public.orders definition
+
+-- Drop table
+
+-- DROP TABLE public.orders;
+
+CREATE TABLE public.orders ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, shipping_address_id uuid NOT NULL, shipment_id uuid NULL, quotation_id uuid NULL, coupon_id uuid NULL, status_id int2 NOT NULL, subtotal numeric(12, 2) NOT NULL, discount_total numeric(12, 2) DEFAULT 0 NULL, shipping_cost numeric(10, 2) DEFAULT 0 NULL, total numeric(12, 2) NOT NULL, notes text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT orders_pkey PRIMARY KEY (id), CONSTRAINT orders_coupon_id_fkey FOREIGN KEY (coupon_id) REFERENCES public.coupons(id), CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id), CONSTRAINT orders_quotation_id_fkey FOREIGN KEY (quotation_id) REFERENCES public.quotations(id), CONSTRAINT orders_shipment_id_fkey FOREIGN KEY (shipment_id) REFERENCES public.shipments(id), CONSTRAINT orders_shipping_address_id_fkey FOREIGN KEY (shipping_address_id) REFERENCES public.addresses(id), CONSTRAINT orders_status_id_fkey FOREIGN KEY (status_id) REFERENCES public.order_statuses(id));
+
+
+-- public.payments definition
+
+-- Drop table
+
+-- DROP TABLE public.payments;
+
+CREATE TABLE public.payments ( id uuid DEFAULT gen_random_uuid() NOT NULL, order_id uuid NOT NULL, status_id int2 NOT NULL, mp_transaction_id text NULL, amount numeric(12, 2) NOT NULL, mp_data jsonb NULL, paid_at timestamptz NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT payments_mp_transaction_id_key UNIQUE (mp_transaction_id), CONSTRAINT payments_pkey PRIMARY KEY (id), CONSTRAINT payments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE, CONSTRAINT payments_status_id_fkey FOREIGN KEY (status_id) REFERENCES public.payment_statuses(id));
+
+
+-- public.order_items definition
+
+-- Drop table
+
+-- DROP TABLE public.order_items;
+
+CREATE TABLE public.order_items ( id uuid DEFAULT gen_random_uuid() NOT NULL, order_id uuid NOT NULL, product_id uuid NOT NULL, quantity int4 NOT NULL, unit_price numeric(12, 2) NOT NULL, unit_discount numeric(12, 2) DEFAULT 0 NULL, inventory_movement_id uuid NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT order_items_pkey PRIMARY KEY (id), CONSTRAINT order_items_quantity_check CHECK ((quantity > 0)), CONSTRAINT order_items_inventory_movement_id_fkey FOREIGN KEY (inventory_movement_id) REFERENCES public.inventory_movements(id), CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE, CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id));
+
+
+-- public.order_status_history definition
+
+-- Drop table
+
+-- DROP TABLE public.order_status_history;
+
+CREATE TABLE public.order_status_history ( id uuid DEFAULT gen_random_uuid() NOT NULL, order_id uuid NOT NULL, status_id int2 NOT NULL, "comment" text NULL, user_id uuid NULL, changed_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT order_status_history_pkey PRIMARY KEY (id), CONSTRAINT order_status_history_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE, CONSTRAINT order_status_history_status_id_fkey FOREIGN KEY (status_id) REFERENCES public.order_statuses(id), CONSTRAINT order_status_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id));
+
+
+
+-- DROP FUNCTION public.armor(bytea);
+
+CREATE OR REPLACE FUNCTION public.armor(bytea)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_armor$function$
+;
+
+-- DROP FUNCTION public.armor(bytea, _text, _text);
+
+CREATE OR REPLACE FUNCTION public.armor(bytea, text[], text[])
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_armor$function$
+;
+
+-- DROP FUNCTION public.crypt(text, text);
+
+CREATE OR REPLACE FUNCTION public.crypt(text, text)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_crypt$function$
+;
+
+-- DROP FUNCTION public.dearmor(text);
+
+CREATE OR REPLACE FUNCTION public.dearmor(text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_dearmor$function$
+;
+
+-- DROP FUNCTION public.decrypt(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.decrypt(bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_decrypt$function$
+;
+
+-- DROP FUNCTION public.decrypt_iv(bytea, bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.decrypt_iv(bytea, bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_decrypt_iv$function$
+;
+
+-- DROP FUNCTION public.digest(text, text);
+
+CREATE OR REPLACE FUNCTION public.digest(text, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_digest$function$
+;
+
+-- DROP FUNCTION public.digest(bytea, text);
+
+CREATE OR REPLACE FUNCTION public.digest(bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_digest$function$
+;
+
+-- DROP FUNCTION public.encrypt(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.encrypt(bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_encrypt$function$
+;
+
+-- DROP FUNCTION public.encrypt_iv(bytea, bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.encrypt_iv(bytea, bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_encrypt_iv$function$
+;
+
+-- DROP FUNCTION public.fips_mode();
+
+CREATE OR REPLACE FUNCTION public.fips_mode()
+ RETURNS boolean
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_check_fipsmode$function$
+;
+
+-- DROP FUNCTION public.gen_random_bytes(int4);
+
+CREATE OR REPLACE FUNCTION public.gen_random_bytes(integer)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_random_bytes$function$
+;
+
+-- DROP FUNCTION public.gen_random_uuid();
+
+CREATE OR REPLACE FUNCTION public.gen_random_uuid()
+ RETURNS uuid
+ LANGUAGE c
+ PARALLEL SAFE
+AS '$libdir/pgcrypto', $function$pg_random_uuid$function$
+;
+
+-- DROP FUNCTION public.gen_salt(text, int4);
+
+CREATE OR REPLACE FUNCTION public.gen_salt(text, integer)
+ RETURNS text
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_gen_salt_rounds$function$
+;
+
+-- DROP FUNCTION public.gen_salt(text);
+
+CREATE OR REPLACE FUNCTION public.gen_salt(text)
+ RETURNS text
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_gen_salt$function$
+;
+
+-- DROP FUNCTION public.hmac(text, text, text);
+
+CREATE OR REPLACE FUNCTION public.hmac(text, text, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_hmac$function$
+;
+
+-- DROP FUNCTION public.hmac(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.hmac(bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pg_hmac$function$
+;
+
+-- DROP FUNCTION public.pgp_armor_headers(in text, out text, out text);
+
+CREATE OR REPLACE FUNCTION public.pgp_armor_headers(text, OUT key text, OUT value text)
+ RETURNS SETOF record
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_armor_headers$function$
+;
+
+-- DROP FUNCTION public.pgp_key_id(bytea);
+
+CREATE OR REPLACE FUNCTION public.pgp_key_id(bytea)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_key_id_w$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt(bytea, bytea, text)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt(bytea, bytea, text, text)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt(bytea, bytea);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt(bytea, bytea)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_decrypt_bytea(bytea, bytea, text, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_decrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_encrypt(text, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_encrypt(text, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_encrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_encrypt(text, bytea);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_encrypt(text, bytea)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_encrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_encrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea);
+
+CREATE OR REPLACE FUNCTION public.pgp_pub_encrypt_bytea(bytea, bytea)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_pub_encrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_decrypt(bytea, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_decrypt(bytea, text, text)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_decrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_decrypt(bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_decrypt(bytea, text)
+ RETURNS text
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_decrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_decrypt_bytea(bytea, text, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_decrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_decrypt_bytea(bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_decrypt_bytea(bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_decrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_encrypt(text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_encrypt(text, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_encrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_encrypt(text, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_encrypt(text, text, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_encrypt_text$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_encrypt_bytea(bytea, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_encrypt_bytea(bytea, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_encrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text);
+
+CREATE OR REPLACE FUNCTION public.pgp_sym_encrypt_bytea(bytea, text, text)
+ RETURNS bytea
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/pgcrypto', $function$pgp_sym_encrypt_bytea$function$
+;
+
+-- DROP FUNCTION public.uuid_generate_v1();
+
+CREATE OR REPLACE FUNCTION public.uuid_generate_v1()
+ RETURNS uuid
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_generate_v1$function$
+;
+
+-- DROP FUNCTION public.uuid_generate_v1mc();
+
+CREATE OR REPLACE FUNCTION public.uuid_generate_v1mc()
+ RETURNS uuid
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_generate_v1mc$function$
+;
+
+-- DROP FUNCTION public.uuid_generate_v3(uuid, text);
+
+CREATE OR REPLACE FUNCTION public.uuid_generate_v3(namespace uuid, name text)
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_generate_v3$function$
+;
+
+-- DROP FUNCTION public.uuid_generate_v4();
+
+CREATE OR REPLACE FUNCTION public.uuid_generate_v4()
+ RETURNS uuid
+ LANGUAGE c
+ PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_generate_v4$function$
+;
+
+-- DROP FUNCTION public.uuid_generate_v5(uuid, text);
+
+CREATE OR REPLACE FUNCTION public.uuid_generate_v5(namespace uuid, name text)
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_generate_v5$function$
+;
+
+-- DROP FUNCTION public.uuid_nil();
+
+CREATE OR REPLACE FUNCTION public.uuid_nil()
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_nil$function$
+;
+
+-- DROP FUNCTION public.uuid_ns_dns();
+
+CREATE OR REPLACE FUNCTION public.uuid_ns_dns()
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_ns_dns$function$
+;
+
+-- DROP FUNCTION public.uuid_ns_oid();
+
+CREATE OR REPLACE FUNCTION public.uuid_ns_oid()
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_ns_oid$function$
+;
+
+-- DROP FUNCTION public.uuid_ns_url();
+
+CREATE OR REPLACE FUNCTION public.uuid_ns_url()
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_ns_url$function$
+;
+
+-- DROP FUNCTION public.uuid_ns_x500();
+
+CREATE OR REPLACE FUNCTION public.uuid_ns_x500()
+ RETURNS uuid
+ LANGUAGE c
+ IMMUTABLE PARALLEL SAFE STRICT
+AS '$libdir/uuid-ossp', $function$uuid_ns_x500$function$
+;

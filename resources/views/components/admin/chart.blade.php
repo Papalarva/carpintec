@@ -1,46 +1,46 @@
 @props(['config', 'currencyY' => false])
 
-<!-- Contenedor de la gráfica -->
+@php
+    // Generamos un ID único para el canvas (ej. chart_aB3dEfg) para evitar choques
+    $chartId = 'chart_' . Str::random(8);
+@endphp
+
 <div class="relative h-72 w-full">
-    <canvas id="dashboardSalesChart"></canvas>
+    <canvas id="{{ $chartId }}"></canvas>
 </div>
 
-<!-- Inyectamos el script solo si se usa este componente -->
 @push('scripts')
-    <!-- Cargamos Chart.js desde CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const ctx = document.getElementById('dashboardSalesChart').getContext('2d');
+            const ctx = document.getElementById('{{ $chartId }}').getContext('2d');
             
-            // Recibimos los datos de PHP (Controlador) a JavaScript
             const chartData = @json($config);
             const useCurrency = {{ $currencyY ? 'true' : 'false' }};
 
             new Chart(ctx, {
-                type: 'line', // Tipo de gráfica elegante
+                type: 'line', 
                 data: {
                     labels: chartData.labels,
                     datasets: [{
                         label: 'Ingresos',
                         data: chartData.data,
                         borderColor: '#C15C3D', // Nuestro color Terracota
-                        backgroundColor: 'rgba(193, 92, 61, 0.1)', // Fondo semi-transparente
+                        backgroundColor: 'rgba(193, 92, 61, 0.1)',
                         borderWidth: 2,
                         pointBackgroundColor: '#ffffff',
                         pointBorderColor: '#C15C3D',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         fill: true,
-                        tension: 0.4 // Curvas suaves
+                        tension: 0.4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }, // Ocultamos la leyenda para más minimalismo
+                        legend: { display: false },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
@@ -55,7 +55,7 @@
                     },
                     scales: {
                         x: {
-                            grid: { display: false } // Quitamos las líneas verticales
+                            grid: { display: false }
                         },
                         y: {
                             beginAtZero: true,

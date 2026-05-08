@@ -1,5 +1,5 @@
-import './bootstrap';
-import './charts';
-
+import './bootstrap'; 
+import Chart from 'chart.js/auto';
+window.Chart = Chart;
 window.Alpine = Alpine;
 Alpine.start();

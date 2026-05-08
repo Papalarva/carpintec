@@ -14,45 +14,67 @@ class CatalogController extends Controller
      */
     public function index(Request $request)
     {
-        // === Categorías activas para el menú lateral (jerarquía) ===
-        $categories = Category::active()
-            ->with('children')            // subcategorías
+        // 1. Recolectamos las variables de la petición
+        $search = $request->input('search');
+        $min = $request->input('min_price');
+        $max = $request->input('max_price');
+        $slug = $request->input('category');
+
+        // 2. Categorías activas para el menú lateral
+        // (Usamos where('is_active', true) en lugar de active() por si no tienes el scope configurado)
+        $categories = Category::where('is_active', true)
+            ->with(['children' => function($q) {
+                $q->where('is_active', true);
+            }])
             ->whereNull('parent_id')
             ->orderBy('sort_order')
             ->get();
 
-        // === Consulta base de productos activos ===
-        $query = Product::active()
-            ->with(['coverImage', 'category']);
+        // 3. Consulta base: Productos activos y con categoría activa
+        $query = Product::query()
+            ->where('is_active', true)
+            ->whereHas('category', function ($q) {
+                $q->where('is_active', true);
+            });
 
-        // Filtro por categoría (slug o UUID, aquí usaremos slug para URLs amigables)
-        if ($slug = $request->input('category')) {
+        // --- APLICACIÓN DE FILTROS ---
+
+        // Filtro por categoría (slug)
+        if ($slug) {
             $category = Category::where('slug', $slug)->first();
             if ($category) {
-                // Incluir también subcategorías si se desea; por ahora agarramos solo esa categoría exacta
                 $query->where('category_id', $category->id);
             }
         }
 
-        // Filtro por texto (nombre, descripción corta, SKU)
-        if ($search = $request->input('search')) {
-            $query->search($search);
+        // Filtro por texto (Búsqueda en nombre, descripción o SKU)
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                // Usamos 'ilike' para PostgreSQL (ignora mayúsculas/minúsculas y acentos si la BD está bien configurada)
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('short_description', 'ilike', "%{$search}%")
+                  ->orWhere('sku', 'ilike', "%{$search}%");
+            });
         }
 
         // Filtro por rango de precio
-        if ($min = $request->input('min_price')) {
+        if ($min) {
             $query->where('price', '>=', (float) $min);
         }
-        if ($max = $request->input('max_price')) {
+        if ($max) {
             $query->where('price', '<=', (float) $max);
         }
 
-        // Orden y paginación
-        $products = $query->orderBy('created_at', 'desc')->paginate(12)->withQueryString();
+        // 4. Ejecución final con relaciones y paginación
+        $products = $query->with('category', 'media')
+            ->orderBy('created_at', 'desc')
+            ->paginate(12)
+            ->appends($request->all()); // Esto es VITAL: mantiene los filtros (?search=mesa&min_price=100) al cambiar a la página 2
 
-        // Pasar filtros actuales a la vista para rellenar campos
-        return view('catalog.index', compact('categories', 'products', 'search', 'min', 'max', 'slug'));
+        // 5. Enviamos TODAS las variables a la vista
+        return view('catalog.index', compact('products', 'categories', 'search', 'min', 'max'));
     }
+    
     public function show($slug)
     {
         $product = Product::with(['images', 'category.parent', 'inventory'])

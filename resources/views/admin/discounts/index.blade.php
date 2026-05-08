@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Descuentos')
-@section('header', 'Descuentos')
+@section('header', 'Gestión de Descuentos')
 
 @section('content')
 <div class="mb-4">

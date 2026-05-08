@@ -5,7 +5,9 @@
         <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Categoría</label>
         <input type="text" name="name" id="name" value="{{ old('name', $category->name ?? '') }}"
                class="block w-full rounded-lg border-gray-200 bg-gray-50 text-sm focus:ring-[#C15C3D] focus:border-[#C15C3D] transition-colors" placeholder="Ej. Comedores">
+        
         @error('name') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
+        @error('slug') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
     </div>
 
     <!-- Categoría Padre -->

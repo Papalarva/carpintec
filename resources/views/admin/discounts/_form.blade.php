@@ -1,8 +1,9 @@
 @php
+    // Usamos el operador Nullsafe (?->) para prevenir errores cuando $discount es nuevo/vacío
     $selectedAppliesTo = old('applies_to', $discount->applies_to ?? 'all');
-    $selectedProducts  = old('product_ids', $discount->products->pluck('id')->toArray() ?? []);
-    $selectedCategories = old('category_ids', $discount->categories->pluck('id')->toArray() ?? []);
-    $selectedCustomers = old('customer_ids', $discount->customers->pluck('id')->toArray() ?? []);
+    $selectedProducts  = old('product_ids', $discount?->products?->pluck('id')->toArray() ?? []);
+    $selectedCategories = old('category_ids', $discount?->categories?->pluck('id')->toArray() ?? []);
+    $selectedCustomers = old('customer_ids', $discount?->customers?->pluck('id')->toArray() ?? []);
 @endphp
 
 <div class="mb-4">

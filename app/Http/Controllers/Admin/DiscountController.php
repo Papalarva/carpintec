@@ -19,17 +19,6 @@ class DiscountController extends Controller
         return view('admin.discounts.index', compact('discounts'));
     }
 
-    public function create()
-    {
-        $products   = Product::orderBy('name')->get();
-        $categories = Category::orderBy('name')->get();
-        $customers  = Customer::with('user')->get()->sortBy('user.full_name');
-        $types      = DiscountType::cases();
-        $appliesOptions = ['all' => 'Todos los productos', 'products' => 'Productos específicos', 'categories' => 'Categorías específicas', 'customers' => 'Clientes específicos'];
-
-        return view('admin.discounts.create', compact('products', 'categories', 'customers', 'types', 'appliesOptions'));
-    }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -119,9 +108,41 @@ class DiscountController extends Controller
         return redirect()->route('admin.discounts.index')->with('success', 'Descuento actualizado.');
     }
 
+    public function create()
+    {
+        // 1. Instanciamos un descuento vacío para enviarlo a la vista y evitar errores de variable indefinida
+        $discount   = new Discount(); 
+        
+        $products   = Product::orderBy('name')->get();
+        $categories = Category::orderBy('name')->get();
+        $customers  = Customer::with('user')->get()->sortBy('user.full_name');
+        $types      = DiscountType::cases();
+        $appliesOptions = [
+            'all' => 'Todos los productos', 
+            'products' => 'Productos específicos', 
+            'categories' => 'Categorías específicas', 
+            'customers' => 'Clientes específicos'
+        ];
+
+        // Añadimos $discount al compact
+        return view('admin.discounts.create', compact('discount', 'products', 'categories', 'customers', 'types', 'appliesOptions'));
+    }
+ 
+
     public function destroy(Discount $discount)
     {
-        $discount->delete();
-        return back()->with('success', 'Descuento eliminado.');
+        try {
+            $discount->delete();
+            return back()->with('success', 'Descuento eliminado correctamente del sistema.');
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            
+            // 2. Blindamos contra la restricción de llave foránea de los cupones (coupons_discount_id_fkey)
+            if ($e->getCode() == '23503') {
+                return back()->with('error', 'No puedes eliminar este descuento porque ya tiene Cupones asociados. Te recomendamos simplemente desactivarlo.');
+            }
+
+            return back()->with('error', 'Ocurrió un error inesperado en la base de datos al intentar eliminar el descuento.');
+        }
     }
 }
