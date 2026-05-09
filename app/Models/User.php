@@ -2,6 +2,7 @@
 
 namespace App\Models;
  
+use Illuminate\Database\Eloquent\SoftDeletes; 
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -14,7 +15,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable implements MustVerifyEmail
 {
     // 👇 1. Quitamos HasApiTokens y agregamos HasUuids correctamente
-    use HasFactory, Notifiable, HasRoles, HasUuids;
+    use HasFactory, Notifiable, HasRoles, HasUuids, SoftDeletes;
 
     // (Eliminamos $incrementing y $keyType porque el trait HasUuids ya lo hace por nosotros en automático)
 

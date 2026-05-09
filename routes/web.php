@@ -6,6 +6,9 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\QuotationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AddressController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SubscriberController;
 
 // ─── Controladores de Administración ────────────────────
 use App\Http\Controllers\Admin\CategoryController;
@@ -20,7 +23,8 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Auth\TwoFactorController;
-use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\Admin\CollectionController;  
+use App\Http\Controllers\OrderController as CustomerOrderController; // Para evitar conflicto de nombres
 
 // ─── Página principal (Tienda / Catálogo) ───────────────
 Route::get('/', [CatalogController::class, 'index'])->name('home');
@@ -39,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
 });
 
 // ─── Catálogo y Carrito ─────────────────────────────────
@@ -50,6 +55,23 @@ Route::post('/carrito/agregar/{product:slug}', [CartController::class, 'add'])->
 Route::patch('/carrito/{product:slug}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/carrito/{product:slug}', [CartController::class, 'remove'])->name('cart.remove');
 Route::get('/carrito/count', [CartController::class, 'count'])->name('cart.count');
+
+// ─── Colecciones  ───────────────────────────────
+Route::get('/colecciones', [App\Http\Controllers\CollectionController::class, 'index'])->name('collections.index');
+Route::get('/colecciones/{collection:slug}', [App\Http\Controllers\CollectionController::class, 'show'])->name('collections.show');
+Route::get('/novedades', [App\Http\Controllers\CollectionController::class, 'newest'])->name('collections.newest');
+
+Route::view('/sobre-nosotros', 'pages.about')->name('about');
+Route::view('/preguntas-frecuentes', 'pages.faq')->name('faq');
+Route::get('/contacto', [ContactController::class, 'index'])->name('contact.index');
+Route::post('/contacto', [ContactController::class, 'send'])->name('contact.send');
+Route::view('/garantia', 'pages.warranty')->name('warranty');
+Route::view('/envios-y-entregas', 'pages.shipping')->name('shipping');
+Route::view('/terminos', 'pages.terms')->name('terms');
+Route::view('/privacidad', 'pages.privacy')->name('privacy');
+Route::post('/newsletter/subscribe', [SubscriberController::class, 'store'])->name('newsletter.subscribe');
+Route::get('/mis-compras', [CustomerOrderController::class, 'index'])->name('orders.index');
+Route::get('/mis-compras/{order}', [CustomerOrderController::class, 'show'])->name('orders.show');
 
 // ─── Checkout y Cotizaciones (Público autenticado) ──────
 Route::middleware(['auth'])->group(function () {
@@ -64,12 +86,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cotizaciones', [QuotationController::class, 'index'])->name('quotations.index');
     Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
     Route::get('/cotizaciones/{quotation}/adjunto/{filename}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
+    Route::patch('/direcciones/{address}/principal', [AddressController::class, 'setPrimary'])->name('addresses.set-primary');
+    Route::resource('addresses', AddressController::class);
 });
 
 // ==========================================
 // 🔓 ZONA COMPARTIDA: ADMINS Y WORKERS
 // ==========================================
-Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin,worker']], function () {    
+Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin|worker']], function () {    
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
     // Rutas de Papelera para Categorías
@@ -84,6 +108,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
 
     Route::resource('quotations', AdminQuotationController::class)->only(['index', 'show', 'edit', 'update']);
     Route::resource('orders', OrderController::class)->only(['index', 'show']);
+
+    Route::resource('collections', CollectionController::class);
 });
 
 // ==========================================

@@ -38,7 +38,14 @@ class QuotationController extends Controller
 
     public function show(Quotation $quotation)
     {
-        $quotation->load(['customer.user', 'product', 'media']);
+        $quotation->load([
+            'customer.user' => function($query) {
+                $query->withTrashed();
+            }, 
+            'product', 
+            'media'
+        ]);
+        
         return view('admin.quotations.show', compact('quotation'));
     }
 

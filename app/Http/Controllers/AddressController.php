@@ -10,14 +10,12 @@ use Illuminate\Support\Facades\Auth;
 class AddressController extends Controller
 {
     /**
-     * Constructor: aplica middleware auth y autorización de recursos.
-     * 'authorizeResource' protegerá automáticamente index, create, store, edit, update, destroy
-     * usando la política AddressPolicy. Para setPrimary añadimos manualmente la autorización.
+     * Constructor: aplica middleware auth únicamente.
+     * Hemos removido authorizeResource para evitar el chequeo de la tabla "permissions" faltante en el DDL.
      */
     public function __construct()
     {
         $this->middleware('auth');
-        $this->authorizeResource(Address::class, 'address');
     }
 
     /**
@@ -25,10 +23,9 @@ class AddressController extends Controller
      */
     public function index()
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-        $customer = $user->customer;
+        $customer = Auth::user()->customer;
         $addresses = $customer->addresses()->latest()->get();
+        
         return view('addresses.index', compact('addresses'));
     }
 
@@ -50,7 +47,7 @@ class AddressController extends Controller
             'street'          => 'required|string|max:255',
             'exterior_number' => 'required|string|max:20',
             'interior_number' => 'nullable|string|max:20',
-            'neighborhood'     => 'required|string|max:255',
+            'neighborhood'    => 'required|string|max:255',
             'city'            => 'required|string|max:255',
             'state'           => 'required|string|max:255',
             'postal_code'     => 'required|string|max:10',
@@ -65,7 +62,6 @@ class AddressController extends Controller
 
         $address = Address::create($validated);
 
-        // Si se marcó como principal, desmarcar las demás
         if ($address->is_primary) {
             $this->setOnlyPrimary($customer, $address);
         }
@@ -79,6 +75,11 @@ class AddressController extends Controller
      */
     public function edit(Address $address)
     {
+        if ($this->isNotOwner($address)) {
+            return redirect()->route('addresses.index')
+                ->with('error', 'Acceso denegado a esta dirección.');
+        }
+
         return view('addresses.edit', compact('address'));
     }
 
@@ -87,12 +88,17 @@ class AddressController extends Controller
      */
     public function update(Request $request, Address $address)
     {
+        if ($this->isNotOwner($address)) {
+            return redirect()->route('addresses.index')
+                ->with('error', 'Acceso denegado a esta dirección.');
+        }
+
         $validated = $request->validate([
             'alias'           => 'nullable|string|max:100',
             'street'          => 'required|string|max:255',
             'exterior_number' => 'required|string|max:20',
             'interior_number' => 'nullable|string|max:20',
-            'neighborhood'     => 'required|string|max:255',
+            'neighborhood'    => 'required|string|max:255',
             'city'            => 'required|string|max:255',
             'state'           => 'required|string|max:255',
             'postal_code'     => 'required|string|max:10',
@@ -109,7 +115,7 @@ class AddressController extends Controller
         }
 
         return redirect()->route('addresses.index')
-            ->with('success', 'Dirección actualizada.');
+            ->with('success', 'Dirección actualizada correctamente.');
     }
 
     /**
@@ -117,18 +123,38 @@ class AddressController extends Controller
      */
     public function destroy(Address $address)
     {
-        $address->delete();
-        return redirect()->route('addresses.index')
-            ->with('success', 'Dirección eliminada.');
+        if ($this->isNotOwner($address)) {
+            return redirect()->route('addresses.index')
+                ->with('error', 'Acceso denegado a esta dirección.');
+        }
+
+        try {
+            $address->delete();
+            
+            return redirect()->route('addresses.index')
+                ->with('success', 'Dirección eliminada correctamente.');
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Manejo silencioso de error por llave foránea (Integridad Referencial)
+            if ($e->getCode() == '23503') {
+                return redirect()->route('addresses.index')
+                    ->with('error', 'No se puede eliminar esta dirección porque ya está vinculada a un envío o pedido.');
+            }
+
+            return redirect()->route('addresses.index')
+                ->with('error', 'Ocurrió un error al intentar eliminar la dirección.');
+        }
     }
 
     /**
-     * Establece una dirección como principal (acción adicional).
+     * Establece una dirección como principal.
      */
     public function setPrimary(Address $address)
     {
-        // Verificación manual porque 'authorizeResource' no cubre este método
-        $this->authorize('setPrimary', $address);
+        if ($this->isNotOwner($address)) {
+            return redirect()->route('addresses.index')
+                ->with('error', 'Acceso denegado a esta dirección.');
+        }
 
         $customer = Auth::user()->customer;
         $this->setOnlyPrimary($customer, $address);
@@ -137,7 +163,7 @@ class AddressController extends Controller
     }
 
     /**
-     * Marca la dirección dada como principal y desmarca el resto.
+     * Marca la dirección dada como principal y desmarca el resto en una transacción.
      */
     private function setOnlyPrimary($customer, Address $address): void
     {
@@ -145,7 +171,16 @@ class AddressController extends Controller
             $customer->addresses()->where('id', '!=', $address->id)
                      ->where('is_primary', true)
                      ->update(['is_primary' => false]);
+            
             $address->update(['is_primary' => true]);
         });
+    }
+
+    /**
+     * Verifica si la dirección NO pertenece al usuario autenticado.
+     */
+    private function isNotOwner(Address $address): bool
+    {
+        return $address->customer_id !== Auth::user()->customer->id;
     }
 }

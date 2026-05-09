@@ -19,7 +19,8 @@
 
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="[https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js](https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js)"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 
 <body class="font-sans antialiased">
@@ -51,8 +52,48 @@
         </div>
         @include('layouts.footer')
     </div>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    @stack('scripts')
+    <script>
+        // 1. Definición global de tu función
+        window.showToast = function(mensaje, isError = false) {
+            const toast = document.getElementById('toast');
+            const msg = document.getElementById('toast-message');
+            if (!toast || !msg) return;
+
+            msg.textContent = mensaje;
+            toast.classList.remove('hidden', 'bg-green-600', 'bg-red-600');
+            
+            if (isError) {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-green-600');
+            }
+            
+            toast.style.opacity = '1';
+            const timeVisible = isError ? 4500 : 2500;
+
+            setTimeout(() => { 
+                toast.style.opacity = '0'; 
+                setTimeout(() => { toast.classList.add('hidden'); }, 300); // Ocultar del DOM tras la transición
+            }, timeVisible);
+        }
+
+        // 2. Interceptar mensajes Flash de Laravel y Errores de Validación
+        document.addEventListener('DOMContentLoaded', () => {
+            @if(session('success'))
+                window.showToast("{{ session('success') }}", false);
+            @endif
+
+            @if(session('error'))
+                window.showToast("{{ session('error') }}", true);
+            @endif
+
+            // NUEVO: Escuchar errores de validación de formularios
+            @if($errors->any())
+                window.showToast("Por favor, verifica los errores en el formulario.", true);
+            @endif
+        });
+    </script>
+    
 </body>
 
 </html>

@@ -21,13 +21,20 @@ class OrderController extends Controller
         $search = $request->query('search');
         $status = $request->query('status');
 
-        $orders = Order::with(['customer.user'])
+        $orders = Order::query()
+            // FORZAMOS A ELOQUENT A TRAER USUARIOS ELIMINADOS
+            ->with(['customer.user' => function($query) {
+                $query->withTrashed();
+            }])
             ->when($search, function ($q) use ($search) {
                 $q->where('id', 'like', "%{$search}%")
                     ->orWhereHas('customer.user', function ($q) use ($search) {
-                        $q->where('first_name', 'ilike', "%{$search}%")
-                            ->orWhere('last_name', 'ilike', "%{$search}%")
-                            ->orWhere('email', 'ilike', "%{$search}%");
+                        // FORZAMOS LA BÚSQUEDA EN USUARIOS ELIMINADOS
+                        $q->withTrashed()->where(function($query) use ($search) {
+                            $query->where('first_name', 'ilike', "%{$search}%")
+                                  ->orWhere('last_name', 'ilike', "%{$search}%")
+                                  ->orWhere('email', 'ilike', "%{$search}%");
+                        });
                     });
             })
             ->when($status && OrderStatus::tryFrom((int)$status), function ($q) use ($status) {
@@ -43,12 +50,15 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load([
-            'customer.user',
+            // CARGAMOS EL USUARIO AUNQUE ESTÉ ELIMINADO
+            'customer.user' => function($query) {
+                $query->withTrashed();
+            },
             'shippingAddress',
             'shipment',
             'items.product',
             'payments',
-            'statusHistory.user',
+            'statusHistory.user', // Opcional: También podrías poner withTrashed() aquí si un admin es eliminado
             'quotation',
         ]);
 

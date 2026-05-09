@@ -22,9 +22,6 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
@@ -37,9 +34,11 @@ class AuthenticatedSessionController extends Controller
             $cookieName = 'trusted_device_' . $request->user()->id;
             
             if ($request->hasCookie($cookieName)) {
-                // Le damos el pase directo marcando la sesión por detrás
+                // Le damos el pase directo marcando la sesión
                 session(['2fa_verified' => true]);
-                return redirect()->intended(route('admin.dashboard'));
+                
+                // CORRECCIÓN: Quitamos el 'intended' para forzar la entrada al panel admin.
+                return redirect()->route('admin.dashboard');
             }
             
             // Si no tiene la cookie, lo mandamos al flujo normal de seguridad
@@ -47,7 +46,8 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('2fa.index');
         }
 
-        return redirect()->route('home');
+        // CORRECCIÓN: Usamos 'intended' para los clientes, así si venían del carrito, regresan al carrito.
+        return redirect()->intended(route('home'));
     }
 
     /**

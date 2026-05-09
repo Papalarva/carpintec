@@ -1,8 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'Cotización #' . substr($quotation->id, 0, 8))
-@section('header', 'Cotización de ' . $quotation->customer->user->first_name)
-
+@section('header', 'Cotización de ' . ($quotation->customer->user?->first_name ?? 'Usuario Eliminado'))
 @section('content') 
 
 {{-- ALERTAS DE SISTEMA --}}
@@ -195,15 +194,17 @@
                 
                 <div>
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nombre Completo</p>
-                    <p class="text-sm text-gray-900 font-medium mt-1">{{ $user->first_name }} {{ $user->last_name }}</p>
+                    <p class="text-sm text-gray-900 font-medium mt-1">
+                        {{ $user?->first_name ?? 'Usuario' }} {{ $user?->last_name ?? 'Eliminado' }}
+                    </p>
                 </div>
                 
                 <div>
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Correo Electrónico</p>
-                    <p class="text-sm text-gray-900 mt-1">{{ $user->email }}</p>
+                    <p class="text-sm text-gray-900 mt-1">{{ $user?->email ?? 'No disponible' }}</p>
                 </div>
                 
-                @if($user->phone)
+                @if($user?->phone)
                 <div>
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Teléfono</p>
                     <p class="text-sm text-gray-900 mt-1">{{ $user->phone }}</p>

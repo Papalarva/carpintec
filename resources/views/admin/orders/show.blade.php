@@ -11,7 +11,10 @@
             <h2 class="text-lg font-medium">Información General</h2>
             <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                 <dt class="text-gray-500">Cliente</dt>
-                <dd>{{ $order->customer->user->first_name }} {{ $order->customer->user->last_name }} ({{ $order->customer->user->email }})</dd>
+                <dd>
+                    {{ $order->customer->user?->first_name ?? 'Usuario' }} {{ $order->customer->user?->last_name ?? 'Eliminado' }} 
+                    <span class="text-gray-400">({{ $order->customer->user?->email ?? 'No disponible' }})</span>
+                </dd>
                 <dt class="text-gray-500">Estado</dt>
                 <dd><x-admin.badge :color="$order->status_id->color()" :label="$order->status_id->label()" /></dd>
                 <dt class="text-gray-500">Subtotal</dt>
