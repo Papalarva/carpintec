@@ -48,7 +48,13 @@
 
                             <div class="py-1">
                                 <x-dropdown-link :href="route('profile.edit')" class="hover:bg-gray-50 hover:text-amber-800">
-                                    Configuración de Perfil
+                                    Mi Perfil
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('addresses.index')" class="hover:bg-gray-50 hover:text-amber-800">
+                                    Mis Direcciones
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('quotations.index')" class="hover:bg-gray-50 hover:text-amber-800">
+                                    Mis Cotizaciones
                                 </x-dropdown-link>
                                 <x-dropdown-link :href="route('orders.index')" class="hover:bg-gray-50 hover:text-amber-800">
                                     Mis Compras
@@ -133,7 +139,13 @@
 
                 <div class="mt-3 space-y-1">
                     <x-responsive-nav-link :href="route('profile.edit')" class="hover:text-amber-800 hover:bg-gray-50">
-                        Configuración de Perfil
+                        Mi Perfil
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('addresses.index')" class="hover:text-amber-800 hover:bg-gray-50">
+                        Mis Direcciones
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('quotations.index')" class="hover:text-amber-800 hover:bg-gray-50">
+                        Mis Cotizaciones
                     </x-responsive-nav-link>
                     <x-responsive-nav-link :href="route('orders.index')" class="hover:text-amber-800 hover:bg-gray-50">
                         Mis Compras

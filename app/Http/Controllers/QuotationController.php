@@ -82,16 +82,6 @@ class QuotationController extends Controller
         return view('quotations.index', compact('quotations'));
     }
 
-    /**
-     * Muestra el detalle de una cotización.
-     */
-    public function show(Quotation $quotation)
-    {
-        $this->authorize('view', $quotation);
-
-        return view('quotations.show', compact('quotation'));
-    }
-
     // Método para convertir cotización en pedido (será llamado desde Chat 3)
     public function convertToOrder(Quotation $quotation)
     {
@@ -100,11 +90,26 @@ class QuotationController extends Controller
     }
 
     /**
+     * Muestra el detalle de una cotización.
+     */
+    public function show(Quotation $quotation)
+    {
+        if ($this->isNotOwner($quotation)) {
+            return redirect()->route('quotations.index')
+                ->with('error', 'Acceso denegado. Esta cotización no pertenece a tu cuenta.');
+        }
+
+        return view('quotations.show', compact('quotation'));
+    }
+
+    /**
      * Nuevo método para descargar archivos usando Spatie
      */
     public function downloadAttachment(Quotation $quotation, Media $media)
     {
-        $this->authorize('view', $quotation);
+        if ($this->isNotOwner($quotation)) {
+            abort(403, 'No tienes permiso para descargar este archivo.');
+        }
 
         // Validamos que el archivo realmente le pertenezca a esta cotización
         abort_unless(
@@ -115,5 +120,16 @@ class QuotationController extends Controller
         );
 
         return $media; // Spatie maneja la descarga automáticamente al retornar el modelo
+    }
+
+    /**
+     * Verifica si la cotización NO pertenece al cliente autenticado.
+     */
+    private function isNotOwner(Quotation $quotation): bool
+    {
+        $customer = Auth::user()->customer;
+        
+        // Si no hay perfil de cliente, o el ID no coincide, bloqueamos el acceso
+        return !$customer || $quotation->customer_id !== $customer->id;
     }
 }
