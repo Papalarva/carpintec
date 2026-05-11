@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
+
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Quotation;
@@ -19,53 +20,67 @@ class DashboardController extends Controller
         // 👑 ZONA DEL ADMINISTRADOR (Analítica y Finanzas)
         if ($user->hasRole('admin')) {
             
-            // 1. Consultas Reales a tu Base de Datos:
             $totalRevenue = Order::sum('total') ?? 0;
             $totalOrders = Order::count();
-            
-            // Nuevos clientes registrados en el mes actual
             $newCustomersThisMonth = Customer::whereMonth('created_at', now()->month)->count();
-
             $pendingQuotations = Quotation::where('status', 'pending')->count();
             $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
                            ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
                            ->count();
 
-            // 2. Configuración temporal para el componente de la gráfica
-            // (En el futuro esto vendrá de un query agrupado por fechas)
+            // Configuración de la gráfica principal
             $salesChartConfig = [
                 'labels' => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
                 'data' => [12000, 19000, 15000, 22000, 18000, 25000],
             ];
 
-            // Retornamos la vista inyectando TODAS las variables
+            // NUEVO: Datos para el Embudo de Ventas (Ejemplo con datos estáticos iniciales)
+            $funnelData = [
+                'visits' => 4500,
+                'carts' => 850,
+                'checkouts' => 320,
+                'purchases' => $totalOrders
+            ];
+
+            // NUEVO: Top 3 Muebles más vendidos (Consulta de ejemplo)
+            /* $topProducts = Product::withCount('orders')
+                                 ->orderBy('orders_count', 'desc')
+                                 ->take(3)
+                                 ->get(); */
+            // Mock temporal para la vista:
+            $topProducts = [
+                (object)['name' => 'Mesa Comedor Nogal', 'sales' => 24, 'revenue' => 45000, 'image' => null],
+                (object)['name' => 'Silla Minimalista Roble', 'sales' => 18, 'revenue' => 12500, 'image' => null],
+                (object)['name' => 'Credenza Parota', 'sales' => 12, 'revenue' => 38000, 'image' => null],
+            ];
+
             return view('admin.dashboard', compact(
-                'totalRevenue',
-                'totalOrders',
-                'newCustomersThisMonth',
-                'pendingQuotations',
-                'lowStockProducts',
-                'salesChartConfig'
+                'totalRevenue', 'totalOrders', 'newCustomersThisMonth', 
+                'pendingQuotations', 'lowStockProducts', 'salesChartConfig',
+                'funnelData', 'topProducts'
             ));
         }
 
         // 👷‍♂️ ZONA DEL WORKER (Operaciones Diarias)
         if ($user->hasRole('worker')) {
             
-            // 1. Consultas Ligeras (Solo lo que necesitan para trabajar)
             $pendingQuotations = Quotation::where('status', 'pending')->count();
             $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
                            ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
                            ->count();
-            
-            // Retornamos la misma vista, pero solo con la data operativa
+            $pendingOrders = Order::where('status', 'pending')->count(); // Nueva variable
+
+            // NUEVO: Barra de progreso operativo (Meta del día)
+            $dailyGoal = 15;
+            $completedToday = Order::whereDate('updated_at', today())->where('status', 'shipped')->count();
+            $progressPercentage = $dailyGoal > 0 ? min(100, ($completedToday / $dailyGoal) * 100) : 0;
+
             return view('admin.dashboard', compact(
-                'pendingQuotations',
-                'lowStockProducts'
+                'pendingQuotations', 'lowStockProducts', 'pendingOrders',
+                'completedToday', 'dailyGoal', 'progressPercentage'
             ));
         }
 
-        // Si por alguna extraña razón un cliente normal logró pasar el middleware
         return redirect()->route('home');
     }
 }

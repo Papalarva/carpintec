@@ -159,3 +159,77 @@ Decidimos utilizar inglés para el código interno y la base de datos, y españo
 •	Las variables y métodos los escribimos en camelCase (ej. $totalRevenue, $lowStockProducts).
 •	Los modelos y controladores los escribimos en PascalCase y en singular (ej. CategoryController en lugar de CategoriesController).
 Esta decisión nos permite mantener el código limpio y compatible con los estándares globales de desarrollo de la comunidad de Laravel.
+
+### Contexto de Componentes Blade y Vistas
+
+La capa de vistas del proyecto está construida principalmente con **Blade components**. La idea general es dividir la interfaz en piezas pequeñas y reutilizables para evitar repetir HTML, clases Tailwind y lógica visual en cada pantalla.
+
+#### 1. Tipos de componentes que existen
+
+- **Componentes de layout con clase PHP**: `app/View/Components/AppLayout.php` y `app/View/Components/GuestLayout.php` no contienen HTML propio; solo redirigen a las vistas `layouts.app` y `layouts.guest`. Sirven como envoltorios principales de las páginas públicas y de autenticación.
+- **Componentes anónimos Blade**: viven en `resources/views/components/*.blade.php` y se usan con la sintaxis `<x-nombre-componente>`. La mayoría de la interfaz del proyecto está aquí.
+- **Componentes con namespace**: los que están dentro de `resources/views/components/admin/` se invocan como `<x-admin.algo>`, por ejemplo `<x-admin.table>` o `<x-admin.badge>`.
+
+#### 2. Cómo funcionan en la práctica
+
+- Los componentes reciben datos mediante **props** declaradas con `@props([...])`.
+- El contenido interior se inserta con `{{ $slot }}`.
+- Cuando un componente necesita más de una zona de contenido, usa **slots nombrados** como `<x-slot name="trigger">` o `<x-slot name="footer">`.
+- Algunos componentes heredan atributos HTML del llamador con `{{ $attributes->merge([...]) }}`, así pueden recibir clases extra, href, id, etc.
+
+#### 3. Componentes base reutilizados en formularios y navegación
+
+- `<x-input-label>`: imprime etiquetas de formulario.
+- `<x-text-input>`: estiliza inputs y permite deshabilitarse con `@disabled`.
+- `<x-input-error>`: lista mensajes de validación.
+- `<x-auth-session-status>`: muestra estados de sesión como mensajes exitosos.
+- `<x-primary-button>`, `<x-secondary-button>` y `<x-danger-button>`: unifican la apariencia de botones por intención visual.
+- `<x-nav-link>` y `<x-responsive-nav-link>`: manejan enlaces activos/inactivos en navegación normal y móvil.
+- `<x-dropdown>` y `<x-dropdown-link>`: construyen menús desplegables con Alpine.js.
+- `<x-application-logo>`: renderiza el logo SVG reutilizable.
+
+#### 4. Separación entre frontend público y panel admin
+
+El proyecto está dividido en dos capas visuales distintas:
+
+- **Frontend público**: usa `resources/views/layouts/app.blade.php` y `resources/views/layouts/guest.blade.php` como marcos principales. Estas vistas se consumen normalmente con `<x-app-layout>` y `<x-guest-layout>`.
+- **Panel administrativo**: usa `resources/views/layouts/admin.blade.php` como layout propio, con navegación, cabecera y contenedor de contenido pensados para gestión interna.
+
+Esta separación es importante porque evita mezclar estilos, navegación y comportamiento entre la tienda pública y el backoffice.
+
+#### 5. Componentes del frontend público
+
+- `resources/views/layouts/navigation.blade.php` combina enlaces públicos, menú de usuario y carrito. Usa `x-dropdown`, `x-dropdown-link` y `x-responsive-nav-link`.
+- `resources/views/layouts/guest.blade.php` envuelve auth screens y muestra el logo con `<x-application-logo>`.
+- `resources/views/components/modal.blade.php` es el modal genérico del frontend. Usa Alpine.js para apertura/cierre, manejo de foco y bloqueo del scroll del body.
+
+#### 6. Componentes y vistas del panel admin
+
+Las vistas del admin viven sobre todo en `resources/views/admin/` y se apoyan en componentes con namespace `x-admin.*`. Ese grupo concentra la UI repetida del panel.
+
+- `<x-admin.sidebar-link>`: resalta el módulo activo en la barra superior del admin.
+- `<x-admin.badge>`: muestra estados, tipos o etiquetas de color controlado por prop.
+- `<x-admin.table>`: renderiza tablas con encabezados dinámicos y filas recibidas por slot.
+- `<x-admin.modal>`: modal simple del admin con título, cuerpo y footer opcional.
+- `<x-admin.stat-card>`: tarjeta de métrica con título, valor, tendencia e ícono.
+- `<x-admin.stat-card-analytic>`: variante más compacta de tarjeta analítica.
+- `<x-admin.chart>`: monta un canvas y registra un gráfico de Chart.js usando `@push('scripts')`.
+
+Además, el layout `resources/views/layouts/admin.blade.php` es el punto de entrada visual del panel y es el que organiza esas piezas en pantalla.
+
+#### 7. Flujo de uso más común
+
+- Las vistas públicas y de autenticación normalmente empiezan con `<x-app-layout>` o `<x-guest-layout>`.
+- Las vistas del admin usan el layout administrativo y dentro llaman componentes específicos como `<x-admin.table>` o `<x-admin.badge>`.
+- Los componentes visuales centralizan estilos Tailwind, así que cualquier cambio de apariencia se hace en un solo archivo y se refleja en todas las pantallas que lo consumen.
+
+#### 8. Puntos importantes de comportamiento
+
+- `x-dropdown` y `x-admin.modal` dependen de Alpine.js para abrir/cerrar elementos sin JavaScript manual complejo.
+- `x-admin.chart` depende de Chart.js disponible en el bundle o en el entorno global y genera un ID único para no chocar si hay más de un gráfico en la misma vista.
+- Los componentes de navegación usan `request()->routeIs(...)` o props `:active` para decidir qué enlace se pinta como activo.
+- Los mensajes flash de éxito/error se muestran desde los layouts, no desde cada vista individual.
+
+#### 9. Lectura rápida del patrón general
+
+Si una vista repite HTML de formularios, botones, enlaces, tablas o badges, probablemente ya existe un componente para eso. La lógica visual vive en los componentes, mientras que las vistas solo pasan datos y slot content.

@@ -12,19 +12,54 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->query('search');
+        // 1. Iniciamos la consulta seleccionando explícitamente las columnas de products
+        // Esto es crucial para que al hacer JOINs no se sobrescriban IDs.
+        $query = Product::select('products.*')->with(['category', 'inventory']);
+
+        // 2. Filtro de Búsqueda
+        if ($request->filled('search')) {
+            $searchTerm = '%' . $request->search . '%';
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('products.name', 'ilike', $searchTerm)
+                  ->orWhere('products.sku', 'ilike', $searchTerm);
+            });
+        }
+
+        // 3. Filtro de Papelera
         $showTrashed = $request->boolean('trashed');
+        if ($showTrashed) {
+            $query->onlyTrashed();
+        }
 
-        $products = Product::query()
-            ->when($search, fn ($q) => $q->search($search))
-            ->when($showTrashed, fn ($q) => $q->onlyTrashed())
-            ->with(['category', 'inventory'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15)
-            ->appends(compact('search', 'showTrashed'));
+        // 4. Lógica de Ordenamiento Dinámico
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc');
 
-        return view('admin.products.index', compact('products', 'search', 'showTrashed'));
+        // ¡NUEVO! Agregamos 'quantity' a los campos permitidos
+        $allowedSorts = ['sku', 'name', 'category_id', 'price', 'is_active', 'quantity'];
+
+        if ($sort && in_array($sort, $allowedSorts)) {
+            $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+
+            // Si el usuario quiere ordenar por stock, hacemos el JOIN con inventory
+            if ($sort === 'quantity') {
+                $query->leftJoin('inventory', 'products.id', '=', 'inventory.product_id')
+                      ->orderBy('inventory.quantity', $direction);
+            } else {
+                // Para los demás campos, especificamos la tabla products
+                $query->orderBy('products.' . $sort, $direction);
+            }
+        } else {
+            // Orden por defecto
+            $query->orderBy('products.created_at', 'desc');
+        }
+
+        // 5. Ejecución y Paginación
+        $products = $query->paginate(15)->withQueryString();
+
+        return view('admin.products.index', compact('products', 'showTrashed'));
     }
+
 
     public function create()
     {
@@ -53,7 +88,6 @@ class ProductController extends Controller
             $product->restore();
 
             return back()->with('success', 'Producto restaurado exitosamente. Ya está visible en el catálogo.');
-
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             // Si alguien intenta restaurar un ID que no existe
             return back()->with('error', 'El producto no fue encontrado en la papelera.');
@@ -77,7 +111,7 @@ class ProductController extends Controller
             'sku'              => 'required|string|unique:products,sku',
             'name'             => 'required|string|max:255',
             'slug'             => 'required|string|max:255|unique:products,slug',
-            'short_description'=> 'nullable|string',
+            'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
             'materials'        => 'nullable|string',
             'dimensions'       => 'nullable|string',
@@ -121,8 +155,7 @@ class ProductController extends Controller
             }
 
             return redirect()->route('admin.products.index')
-                             ->with('success', 'Producto creado correctamente.');
-
+                ->with('success', 'Producto creado correctamente.');
         } catch (\Illuminate\Database\QueryException $e) {
             if ($e->getCode() == '23505') {
                 return back()->withInput()->with('error', 'Error de duplicidad: El SKU o Nombre ya existe.');
@@ -145,7 +178,7 @@ class ProductController extends Controller
             'sku'              => ['required', 'string', Rule::unique('products')->ignore($product->id)],
             'name'             => 'required|string|max:255',
             'slug'             => ['required', 'string', 'max:255', Rule::unique('products')->ignore($product->id)],
-            'short_description'=> 'nullable|string',
+            'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
             'materials'        => 'nullable|string',
             'dimensions'       => 'nullable|string',
@@ -192,8 +225,7 @@ class ProductController extends Controller
             }
 
             return redirect()->route('admin.products.index')
-                             ->with('success', 'Producto actualizado correctamente.');
-
+                ->with('success', 'Producto actualizado correctamente.');
         } catch (\Illuminate\Database\QueryException $e) {
             return back()->withInput()->with('error', 'Ocurrió un error inesperado al actualizar el producto.');
         }
@@ -203,10 +235,9 @@ class ProductController extends Controller
     {
         try {
             $product = Product::onlyTrashed()->findOrFail($id);
-            $product->forceDelete(); 
-            
-            return back()->with('success', 'Producto eliminado definitivamente de la base de datos.');
+            $product->forceDelete();
 
+            return back()->with('success', 'Producto eliminado definitivamente de la base de datos.');
         } catch (\Illuminate\Database\QueryException $e) {
             // Proteger contra eliminación de productos que ya están en Carritos u Órdenes (llave foránea)
             if ($e->getCode() == '23503') {
