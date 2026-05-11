@@ -7,8 +7,7 @@ use App\Http\Requests\StoreQuotationRequest;
 use App\Models\Product;
 use App\Models\Quotation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Illuminate\Support\Facades\Auth; 
 // use App\Events\QuotationRequested; <-- Para implementar en el futuro
 
 class QuotationController extends Controller
@@ -49,7 +48,8 @@ class QuotationController extends Controller
         // Regla 1: ALMACENAMIENTO SEGURO CON SPATIE MEDIALIBRARY
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $quotation->addMedia($file)->toMediaCollection('quotation_files');
+                // Indicamos explícitamente el disco 'public'
+                $quotation->addMedia($file)->toMediaCollection('quotation_files', 'public');
             }
         }
 
