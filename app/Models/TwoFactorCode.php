@@ -2,22 +2,28 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Subscriber extends Model
+class TwoFactorCode extends Model
 {
-    use HasUuids;
-
     protected $fillable = [
-        'email',
-        'customer_id',
-        'is_active',
+        'user_id',
+        'code',
+        'expires_at',
     ];
 
-    public function customer(): BelongsTo
+    protected $casts = [
+        'expires_at' => 'datetime',
+    ];
+
+    public function user()
     {
-        return $this->belongsTo(Customer::class);
+        return $this->belongsTo(User::class);
+    }
+
+    // Helper para saber si el código ya caducó
+    public function isExpired(): bool
+    {
+        return $this->expires_at->isPast();
     }
 }
