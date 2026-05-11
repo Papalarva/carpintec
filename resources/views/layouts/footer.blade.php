@@ -36,7 +36,7 @@
                     <li><a href="{{ route('collections.newest') }}"
                             class="text-sm text-neutral-300 hover:text-amber-500 transition-colors">Nuevas
                             Colecciones</a></li>
-                    <li><a href="#"
+                    <li><a href="{{ route('quotations.index') }}"
                             class="text-sm text-neutral-300 hover:text-amber-500 transition-colors">Proyectos a
                             Medida</a></li>
                     <li><a href="{{ route('about') }}"

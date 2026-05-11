@@ -13,10 +13,6 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class QuotationController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
 
     public function create(?Product $product = null)
     {
@@ -103,23 +99,33 @@ class QuotationController extends Controller
     }
 
     /**
-     * Nuevo método para descargar archivos usando Spatie
+     * Descarga archivos adjuntos de forma segura (Compatible con UUID).
      */
-    public function downloadAttachment(Quotation $quotation, Media $media)
+    public function downloadAttachment(Quotation $quotation, $mediaId)
     {
+        // 1. Seguridad: Verificar que el cliente logueado sea el dueño de la cotización
         if ($this->isNotOwner($quotation)) {
-            abort(403, 'No tienes permiso para descargar este archivo.');
+            abort(403, 'No tienes permiso para descargar los archivos de esta cotización.');
         }
 
-        // Validamos que el archivo realmente le pertenezca a esta cotización
-        abort_unless(
-            $media->model_id === $quotation->id && 
-            $media->model_type === Quotation::class && 
-            $media->collection_name === 'quotation_files',
-            404
-        );
+        // 2. Usar el modelo de Media personalizado que entiende UUIDs
+        $media = \App\Models\Media::findOrFail($mediaId);
 
-        return $media; // Spatie maneja la descarga automáticamente al retornar el modelo
+        // 3. Validación estricta casteando a string para evitar falsos negativos
+        if ((string) $media->model_id !== (string) $quotation->id) {
+            abort(403, 'Permiso denegado: Este archivo no pertenece a la cotización actual.');
+        }
+
+        // 4. Obtener la ruta física del archivo
+        $path = $media->getPath();
+
+        // 5. Manejo de error silencioso con Toast si el archivo no existe físicamente
+        if (!file_exists($path)) {
+            return back()->with('error', 'El archivo físico ya no se encuentra disponible en el servidor.');
+        }
+
+        // 6. Forzar la descarga con su nombre original
+        return response()->download($path, $media->file_name);
     }
 
     /**

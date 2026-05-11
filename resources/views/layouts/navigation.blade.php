@@ -74,9 +74,16 @@
                         </x-slot>
                     </x-dropdown>
                 @else
-                    <a href="{{ route('login') }}"
-                        class="text-sm font-medium tracking-wide text-gray-900 hover:text-amber-800 transition-colors">Iniciar
-                        sesión</a>
+                    <div class="flex items-center space-x-4">
+                        <a href="{{ route('login') }}"
+                            class="text-sm font-medium tracking-wide text-gray-900 hover:text-amber-800 transition-colors">
+                            Iniciar sesión
+                        </a>
+                        <a href="{{ route('register') }}"
+class="text-sm font-medium tracking-wide text-gray-900 hover:text-amber-800 transition-colors">
+                            Crear cuenta
+                        </a>
+                    </div>
                 @endauth
 
                 <div x-data="{
@@ -166,6 +173,9 @@
                 <div class="mt-3 space-y-1">
                     <x-responsive-nav-link :href="route('login')" class="hover:text-amber-800 hover:bg-gray-50">
                         Iniciar sesión
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('register')" class="hover:text-amber-800 hover:bg-gray-50">
+                        Crear cuenta
                     </x-responsive-nav-link>
                 </div>
             </div>

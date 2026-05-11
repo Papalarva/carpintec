@@ -23,7 +23,7 @@ use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Auth\TwoFactorController;
-use App\Http\Controllers\Admin\CollectionController;  
+use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\OrderController as CustomerOrderController; // Para evitar conflicto de nombres
 
 // ─── Página principal (Tienda / Catálogo) ───────────────
@@ -43,7 +43,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
 });
 
 // ─── Catálogo y Carrito ─────────────────────────────────
@@ -81,11 +80,13 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/checkout/remove-coupon', [CheckoutController::class, 'removeCoupon'])->name('checkout.remove-coupon');
     Route::get('/pedido/{order}/confirmacion', [CheckoutController::class, 'confirmation'])->name('orders.confirmation');
 
-    Route::get('/cotizar/{product?}', [QuotationController::class, 'create'])->name('quotation.request');
+    Route::get('/cotizar/{product?}', [QuotationController::class, 'create'])->name('quotations.create');
     Route::post('/cotizaciones', [QuotationController::class, 'store'])->name('quotations.store');
     Route::get('/cotizaciones', [QuotationController::class, 'index'])->name('quotations.index');
+    Route::get('/cotizaciones/{quotation}/', [QuotationController::class, 'edit'])->name('quotations.edit');
     Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
-    Route::get('/cotizaciones/{quotation}/adjunto/{filename}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
+    Route::get('/cotizaciones/{quotation}/adjunto/{mediaId}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
+
     Route::patch('/direcciones/{address}/principal', [AddressController::class, 'setPrimary'])->name('addresses.set-primary');
     Route::resource('addresses', AddressController::class);
 });
@@ -93,9 +94,9 @@ Route::middleware(['auth'])->group(function () {
 // ==========================================
 // 🔓 ZONA COMPARTIDA: ADMINS Y WORKERS
 // ==========================================
-Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin|worker']], function () {    
+Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin|worker']], function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Rutas de Papelera para Categorías
     Route::post('categories/{id}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
     Route::delete('categories/{id}/force-delete', [CategoryController::class, 'forceDelete'])->name('categories.force-delete');
@@ -150,7 +151,7 @@ Route::middleware(['auth'])->group(function () {
 // ─── Pruebas ────────────────────────────────────────────
 Route::get('/test-mail', function () {
     \Illuminate\Support\Facades\Mail::raw(
-        '¡Hola! Conexión Mailtrap funciona.', 
+        '¡Hola! Conexión Mailtrap funciona.',
         function ($message) {
             $message->to('prueba@carpintec.local')->subject('Prueba de Conexión');
         }

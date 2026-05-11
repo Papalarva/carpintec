@@ -9,8 +9,9 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -25,8 +26,6 @@ class RegisteredUserController extends Controller
 
     /**
      * Handle an incoming registration request.
-     *
-     * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
@@ -35,19 +34,43 @@ class RegisteredUserController extends Controller
             'last_name'  => ['required', 'string', 'max:255'],
             'email'      => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
             'password'   => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'first_name.required' => 'El nombre es obligatorio.',
+            'last_name.required'  => 'Los apellidos son obligatorios.',
+            'email.required'      => 'El correo electrónico es obligatorio.',
+            'email.unique'        => 'Este correo ya está registrado. Por favor, inicia sesión.',
+            'password.required'   => 'La contraseña es obligatoria.',
+            'password.confirmed'  => 'Las contraseñas no coinciden.',
+            'password.min'        => 'La contraseña debe tener al menos 8 caracteres.',
         ]);
 
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name'  => $request->last_name,
-            'email'      => $request->email,
-            'password'   => $request->password,
-        ]);
+        try {
+            $user = DB::transaction(function () use ($request) {
+                
+                $newUser = User::create([
+                    'first_name' => $request->first_name,
+                    'last_name'  => $request->last_name,
+                    'email'      => $request->email,
+                    'password'   => Hash::make($request->password), 
+                ]);
+                $newUser->customer()->create([
+                    'accepts_marketing' => false, 
+                ]);
 
-        event(new Registered($user));
+                return $newUser;
+            });
 
-        Auth::login($user);
+            event(new Registered($user));
 
-        return redirect()->route('home');
+            Auth::login($user);
+
+            return redirect()->route('home')
+                ->with('success', '¡Bienvenido a Carpintec! Tu cuenta ha sido creada exitosamente.');
+
+        } catch (\Exception $e) {
+            Log::error('Error en registro de usuario: ' . $e->getMessage());
+            
+            return back()->withInput()->with('error', 'Ocurrió un error al crear tu cuenta. Por favor, intenta de nuevo.');
+        }
     }
 }
