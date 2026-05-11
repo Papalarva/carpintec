@@ -180,7 +180,7 @@
                         @csrf @method('DELETE')
                         {{-- Usamos un gris muy oscuro (casi negro) en lugar de un rojo chillón para dar la sensación de elegancia ante una acción final --}}
                         <button type="submit"
-                            class="min-w-[140px] px-6 py-3 bg-gray-900 text-white hover:bg-black rounded-xl font-bold text-sm uppercase tracking-widest transition-colors font-sans shadow-sm">
+                            class="min-w-[140px] px-6 py-3 bg-red-800 text-white hover:bg-red-900 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors font-sans shadow-sm">
                             Confirmar
                         </button>
                     </form>
