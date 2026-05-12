@@ -10,10 +10,35 @@ use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $collections = Collection::withCount('products')->get();
-        return view('admin.collections.index', compact('collections'));
+        $search = $request->query('search');
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc');
+
+        // withCount crea automáticamente la columna virtual 'products_count'
+        $query = Collection::withCount('products');
+
+        // 1. Filtro de Búsqueda
+        if ($search) {
+            $query->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('description', 'ilike', "%{$search}%");
+        }
+
+        // 2. Ordenamiento Dinámico
+        $allowedSorts = ['name', 'products_count', 'is_active'];
+        if ($sort && in_array($sort, $allowedSorts)) {
+            $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($sort, $direction);
+        } else {
+            // Orden por defecto
+            $query->latest();
+        }
+
+        // 3. Paginación preservando parámetros
+        $collections = $query->paginate(15)->appends(compact('search', 'sort', 'direction'));
+
+        return view('admin.collections.index', compact('collections', 'search'));
     }
 
     public function create()
