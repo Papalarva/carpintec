@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Role; // <-- No olvides importar el modelo Role
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Log; // <-- Para registrar errores silenciosamente
 use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
@@ -32,45 +32,36 @@ class RegisteredUserController extends Controller
         $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name'  => ['required', 'string', 'max:255'],
-            'email'      => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users'],
-            'password'   => ['required', 'confirmed', Rules\Password::defaults()],
-        ], [
-            'first_name.required' => 'El nombre es obligatorio.',
-            'last_name.required'  => 'Los apellidos son obligatorios.',
-            'email.required'      => 'El correo electrónico es obligatorio.',
-            'email.unique'        => 'Este correo ya está registrado. Por favor, inicia sesión.',
-            'password.required'   => 'La contraseña es obligatoria.',
-            'password.confirmed'  => 'Las contraseñas no coinciden.',
-            'password.min'        => 'La contraseña debe tener al menos 8 caracteres.',
+            'email'      => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'password'   => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
         ]);
 
+        $user = User::create([
+            'first_name' => $request->first_name,
+            'last_name'  => $request->last_name,
+            'email'      => $request->email,
+            'password'   => Hash::make($request->password),
+        ]);
+
+        // SOLUCIÓN: Asignación nativa de Eloquent con manejo de errores silencioso
         try {
-            $user = DB::transaction(function () use ($request) {
-                
-                $newUser = User::create([
-                    'first_name' => $request->first_name,
-                    'last_name'  => $request->last_name,
-                    'email'      => $request->email,
-                    'password'   => Hash::make($request->password), 
-                ]);
-                $newUser->customer()->create([
-                    'accepts_marketing' => false, 
-                ]);
-
-                return $newUser;
-            });
-
-            event(new Registered($user));
-
-            Auth::login($user);
-
-            return redirect()->route('home')
-                ->with('success', '¡Bienvenido a Carpintec! Tu cuenta ha sido creada exitosamente.');
-
-        } catch (\Exception $e) {
-            Log::error('Error en registro de usuario: ' . $e->getMessage());
+            $role = Role::where('name', 'customer')->first();
             
-            return back()->withInput()->with('error', 'Ocurrió un error al crear tu cuenta. Por favor, intenta de nuevo.');
+            if ($role) {
+                // Usamos attach() porque es una inserción limpia para un usuario nuevo
+                $user->roles()->attach($role->id);
+            }
+        } catch (\Exception $e) {
+            // Regla de Oro: Manejo seguro y silencioso de errores. 
+            // Registramos el error internamente pero no rompemos el registro del cliente.
+            Log::error('Carpintec Auth Error - No se pudo asignar el rol inicial al usuario: ' . $e->getMessage());
         }
+
+        event(new Registered($user));
+
+        Auth::login($user);
+
+        // Opcional: Podríamos agregar nuestro sistema de Toasts aquí: ->with('success', '¡Bienvenido a Carpintec!')
+        return redirect(route('home', absolute: false));
     }
 }

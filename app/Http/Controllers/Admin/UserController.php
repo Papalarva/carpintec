@@ -63,21 +63,33 @@ class UserController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name'  => 'required|string|max:255',
-            'email'      => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'email'      => ['required', 'email', \Illuminate\Validation\Rule::unique('users')->ignore($user->id)],
             'phone'      => 'nullable|string',
             'roles'      => 'array',
             'roles.*'    => 'exists:roles,id',
         ]);
 
-        $user->update([
-            'first_name' => $validated['first_name'],
-            'last_name'  => $validated['last_name'],
-            'email'      => $validated['email'],
-            'phone'      => $validated['phone'],
-        ]);
+        try {
+            $user->update([
+                'first_name' => $validated['first_name'],
+                'last_name'  => $validated['last_name'],
+                'email'      => $validated['email'],
+                'phone'      => $validated['phone'],
+            ]);
 
-        $user->roles()->sync($validated['roles'] ?? []);
+            // SOLUCIÓN: Usar el método nativo de Eloquent sync() adaptado a tu tabla polimórfica
+            // Si la vista no envía ningún rol (array vacío), se quitarán todos los roles del usuario.
+            $user->roles()->sync($validated['roles'] ?? []);
 
-        return redirect()->route('admin.users.index')->with('success', 'Usuario actualizado correctamente.');
+            return redirect()->route('admin.users.index')
+                             ->with('success', 'Usuario actualizado correctamente.');
+                             
+        } catch (\Exception $e) {
+            // Regla de Oro: Manejo seguro y silencioso de errores
+            // (Si necesitas depurar en el futuro, puedes usar Log::error($e->getMessage()) aquí)
+            return redirect()->back()
+                             ->withInput()
+                             ->with('error', 'Ocurrió un error al actualizar el usuario. Intenta de nuevo.');
+        }
     }
 }
