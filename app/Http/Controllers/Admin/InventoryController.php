@@ -15,29 +15,54 @@ class InventoryController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
-        $filter = $request->query('filter'); // Nuevo filtro
+        $filter = $request->query('filter');
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'asc');
 
-        // KPIs Rápidos para el Dashboard de Inventario
+        // KPIs
         $totalTracked = Product::where('track_inventory', true)->count();
         $lowStockCount = Product::where('track_inventory', true)
             ->whereHas('inventory', function($q) {
                 $q->whereColumn('quantity', '<=', 'min_quantity');
             })->count();
 
-        $products = Product::with('inventory')
-            ->where('track_inventory', true)
-            ->when($search, fn ($q) =>
-                $q->where(fn($sq) => 
-                    $sq->where('name', 'ilike', "%{$search}%")
-                       ->orWhere('sku', 'ilike', "%{$search}%")
-                )
-            )
-            ->when($filter === 'low_stock', fn ($q) =>
-                $q->whereHas('inventory', fn($iq) => $iq->whereColumn('quantity', '<=', 'min_quantity'))
-            )
-            ->orderBy('name')
-            ->paginate(20)
-            ->appends(['search' => $search, 'filter' => $filter]);
+        // 1. Consulta Base con select('products.*') para evitar colisión de IDs al hacer JOIN
+        $query = Product::select('products.*')
+            ->with('inventory')
+            ->where('track_inventory', true);
+
+        // 2. Búsqueda
+        if ($search) {
+            $query->where(function($sq) use ($search) {
+                $sq->where('products.name', 'ilike', "%{$search}%")
+                   ->orWhere('products.sku', 'ilike', "%{$search}%");
+            });
+        }
+
+        // 3. Filtro Bajo Stock
+        if ($filter === 'low_stock') {
+            $query->whereHas('inventory', fn($iq) => $iq->whereColumn('quantity', '<=', 'min_quantity'));
+        }
+
+        // 4. Ordenamiento Dinámico
+        $allowedSorts = ['sku', 'name', 'quantity', 'min_quantity', 'location'];
+        
+        if ($sort && in_array($sort, $allowedSorts)) {
+            $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
+            
+            // Si la columna pertenece a la tabla inventory, hacemos el JOIN al vuelo
+            if (in_array($sort, ['quantity', 'min_quantity', 'location'])) {
+                $query->leftJoin('inventory', 'products.id', '=', 'inventory.product_id')
+                      ->orderBy("inventory.{$sort}", $direction);
+            } else {
+                // Columnas propias de products
+                $query->orderBy("products.{$sort}", $direction);
+            }
+        } else {
+            $query->orderBy('products.name', 'asc');
+        }
+
+        $products = $query->paginate(20)->withQueryString();
 
         return view('admin.inventory.index', compact('products', 'search', 'filter', 'totalTracked', 'lowStockCount'));
     }
@@ -62,7 +87,7 @@ class InventoryController extends Controller
     {
         // Ahora permitimos cantidad 0, por si solo quieren cambiar la ubicación o el mínimo
         $validated = $request->validate([
-            'quantity'     => 'required|integer', 
+            'quantity'     => 'required|integer',
             'reference'    => 'nullable|string|max:255',
             'min_quantity' => 'required|integer|min:0',
             'location'     => 'nullable|string|max:255',
@@ -107,8 +132,7 @@ class InventoryController extends Controller
             DB::commit();
 
             return redirect()->route('admin.inventory.index')
-                             ->with('success', 'Ficha de inventario actualizada correctamente.');
-
+                ->with('success', 'Ficha de inventario actualizada correctamente.');
         } catch (\Exception $e) {
             // SI ALGO FALLA, REVERTIMOS TODO PARA NO CORROMPER EL INVENTARIO
             DB::rollBack();

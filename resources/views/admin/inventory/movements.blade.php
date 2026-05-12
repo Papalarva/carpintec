@@ -1,106 +1,87 @@
 @extends('layouts.admin')
 
-@section('title', 'Historial de Movimientos - ' . $product->name)
-@section('header', 'Kardex de Inventario')
+@section('title', 'Kardex - ' . $product->name)
 
-@section('content')
-
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-    <div>
-        <div class="flex items-center gap-3 mb-1">
-            <h3 class="text-xl font-playfair font-semibold text-gray-900">{{ $product->name }}</h3>
-            <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 tracking-wider">SKU: {{ $product->sku }}</span>
-        </div>
-        <p class="text-sm text-gray-500">Historial completo de entradas, salidas y ajustes del sistema.</p>
-    </div>
-    
-    <div class="flex items-center gap-5">
-        <div class="text-right">
-            <p class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Stock Actual</p>
-            <p class="text-3xl font-bold {{ $product->inventory?->quantity <= $product->inventory?->min_quantity ? 'text-rose-600' : 'text-emerald-600' }}">
-                {{ $product->inventory?->quantity ?? 0 }}
+@section('header')
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-2xl font-serif font-bold text-gray-900">Kardex de Movimientos</h1>
+            <p class="text-sm text-gray-500 font-sans mt-1">
+                {{ $product->name }} <span class="mx-2">|</span> SKU: {{ $product->sku }}
             </p>
         </div>
-        <div class="h-10 w-px bg-gray-200 hidden sm:block"></div>
-        <a href="{{ route('admin.inventory.index') }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm">
-            ← Volver al catálogo
-        </a>
+        <div class="flex items-center gap-4">
+            <div class="text-right hidden sm:block">
+                <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest font-sans mb-0.5">Stock Actual</p>
+                <p class="text-xl font-sans font-bold text-gray-900">{{ $product->inventory?->quantity ?? 0 }}</p>
+            </div>
+            <a href="{{ route('admin.inventory.adjust', $product) }}" class="inline-flex items-center gap-2 bg-amber-900 hover:bg-amber-800 text-white uppercase tracking-widest text-xs font-bold rounded-xl px-4 py-2.5 transition-colors shadow-sm font-sans">
+                <svg class="w-4 h-4 text-amber-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"></path></svg>
+                Realizar Ajuste
+            </a>
+        </div>
     </div>
-</div>
+@endsection
 
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-    <x-admin.table :headers="['Fecha', 'Tipo de Movimiento', 'Cantidad', 'Stock Resultante', 'Referencia / Motivo', 'Realizado por']" :rows="$movements">
-        @forelse($movements as $mov)
-            <tr class="hover:bg-gray-50 transition-colors">
-                
-                <td class="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                    <div class="font-medium text-gray-900">{{ $mov->created_at->format('d/m/Y') }}</div>
-                    <div class="text-xs">{{ $mov->created_at->format('h:i A') }}</div>
-                </td>
-                
-                <td class="px-6 py-4">
-                    @switch($mov->movement_type)
-                        @case('sale') 
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">Venta en Tienda</span> 
-                            @break
-                        @case('restock') 
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">Entrada (Compra)</span> 
-                            @break
-                        @case('adjustment') 
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">Ajuste Manual</span> 
-                            @break
-                        @case('return') 
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-800 border border-yellow-200">Devolución</span> 
-                            @break
-                        @default 
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">{{ ucfirst($mov->movement_type) }}</span>
-                    @endswitch
-                </td>
+@section('content')
+<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    
+    <div class="border-b border-gray-100 px-8 py-5 bg-gray-50/50">
+        <h2 class="text-lg font-medium text-gray-900 font-serif flex items-center gap-2">
+            <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Historial de Entradas y Salidas
+        </h2>
+    </div>
 
-                <td class="px-6 py-4 text-right whitespace-nowrap">
-                    <span class="inline-flex items-center justify-center px-2.5 py-1 rounded text-sm font-mono font-bold {{ $mov->quantity > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' }}">
-                        {{ $mov->quantity > 0 ? '+' : '' }}{{ $mov->quantity }}
-                    </span>
-                </td>
-
-                <td class="px-6 py-4 text-right">
-                    <span class="font-mono text-gray-900 font-medium">{{ $mov->resulting_quantity }}</span>
-                </td>
-
-                <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title="{{ $mov->reference }}">
-                    {{ $mov->reference ?? '—' }}
-                </td>
-
-                <td class="px-6 py-4 text-sm text-gray-500">
-                    <div class="flex items-center gap-2">
-                        @if($mov->user)
-                            <div class="w-6 h-6 rounded-full bg-[#C15C3D] text-white flex items-center justify-center text-xs font-bold">
-                                {{ substr($mov->user->first_name, 0, 1) }}
-                            </div>
-                            <span>{{ $mov->user->first_name }} {{ $mov->user->last_name }}</span>
+    <div class="p-8 md:p-10">
+        <div class="relative border-l border-gray-200 ml-4">
+            @forelse($movements as $mov)
+                <div class="mb-10 ml-8 relative">
+                    {{-- Punto indicador --}}
+                    <span class="absolute -left-12 flex h-8 w-8 items-center justify-center rounded-full border-2 bg-white ring-4 ring-white 
+                        {{ $mov->quantity > 0 ? 'border-amber-600 text-amber-600' : ($mov->quantity < 0 ? 'border-red-700 text-red-700' : 'border-gray-400 text-gray-400') }}">
+                        @if($mov->quantity > 0)
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m0 0l6.75-6.75M12 19.5l-6.75-6.75"></path></svg>
+                        @elseif($mov->quantity < 0)
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19.5v-15m0 0l-6.75 6.75M12 4.5l6.75 6.75"></path></svg>
                         @else
-                            <div class="w-6 h-6 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            </div>
-                            <span class="font-medium text-gray-700">Sistema Automático</span>
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"></path></svg>
                         @endif
+                    </span>
+
+                    <div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-50/80 p-5 rounded-2xl border border-gray-100 hover:shadow-sm transition-shadow">
+                        <div class="mb-3 md:mb-0">
+                            <div class="flex items-center gap-3 mb-1">
+                                <span class="text-lg font-sans font-bold {{ $mov->quantity > 0 ? 'text-amber-900' : 'text-red-800' }}">
+                                    {{ $mov->quantity > 0 ? '+' : '' }}{{ $mov->quantity }} piezas
+                                </span>
+                                <span class="text-[10px] font-bold uppercase tracking-widest text-gray-500 font-sans bg-white px-2.5 py-1 rounded-md border border-gray-200 shadow-sm">
+                                    Resultante: {{ $mov->resulting_quantity }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-600 font-sans mt-2 italic">"{{ $mov->reference ?? 'Sin motivo registrado' }}"</p>
+                        </div>
+                        <div class="text-left md:text-right">
+                            <p class="text-xs font-bold text-gray-900 font-sans">{{ $mov->created_at->format('d de F, Y') }}</p>
+                            <p class="text-xs text-gray-500 font-sans mb-2">{{ $mov->created_at->format('H:i') }} hrs</p>
+                            
+                            <div class="flex items-center md:justify-end gap-1.5 text-xs font-medium text-gray-600 font-sans">
+                                <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"></path></svg>
+                                {{ $mov->user ? $mov->user->first_name . ' ' . $mov->user->last_name : 'Sistema Automático' }}
+                            </div>
+                        </div>
                     </div>
-                </td>
+                </div>
+            @empty
+                <div class="text-center py-10">
+                    <span class="text-sm font-medium text-gray-500 font-sans tracking-wide">Aún no hay movimientos registrados en el Kardex.</span>
+                </div>
+            @endforelse
+        </div>
 
-            </tr>
-        @empty
-            <tr>
-                <td colspan="6" class="px-6 py-16 text-center">
-                    <svg class="mx-auto h-12 w-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    <h3 class="text-sm font-medium text-gray-900">Sin Movimientos</h3>
-                    <p class="mt-1 text-sm text-gray-500">Este producto aún no tiene historial de entradas o salidas en el almacén.</p>
-                </td>
-            </tr>
-        @endforelse
-    </x-admin.table>
-</div>
-
-<div class="mt-6">
-    {{ $movements->links() }}
+        <div class="mt-8 font-sans">
+            {{ $movements->links() }}
+        </div>
+    </div>
 </div>
 @endsection
