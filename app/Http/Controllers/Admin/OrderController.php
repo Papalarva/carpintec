@@ -20,29 +20,46 @@ class OrderController extends Controller
     {
         $search = $request->query('search');
         $status = $request->query('status');
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'desc');
 
-        $orders = Order::query()
-            // FORZAMOS A ELOQUENT A TRAER USUARIOS ELIMINADOS
+        $query = Order::query()
             ->with(['customer.user' => function($query) {
                 $query->withTrashed();
-            }])
-            ->when($search, function ($q) use ($search) {
-                $q->where('id', 'like', "%{$search}%")
+            }]);
+
+        // 1. Filtro de Búsqueda
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                // Casteamos el ID a texto para poder usar LIKE
+                $q->whereRaw('id::text like ?', ["%{$search}%"])
                     ->orWhereHas('customer.user', function ($q) use ($search) {
-                        // FORZAMOS LA BÚSQUEDA EN USUARIOS ELIMINADOS
                         $q->withTrashed()->where(function($query) use ($search) {
                             $query->where('first_name', 'ilike', "%{$search}%")
                                   ->orWhere('last_name', 'ilike', "%{$search}%")
                                   ->orWhere('email', 'ilike', "%{$search}%");
                         });
                     });
-            })
-            ->when($status && OrderStatus::tryFrom((int)$status), function ($q) use ($status) {
-                $q->where('status_id', $status);
-            })
-            ->latest()
-            ->paginate(15)
-            ->appends(compact('search', 'status'));
+            });
+        }
+
+        // 2. Filtro de Estado
+        if ($status && OrderStatus::tryFrom((int)$status)) {
+            $query->where('status_id', $status);
+        }
+
+        // 3. Ordenamiento Dinámico (Whitelist)
+        $allowedSorts = ['id', 'total', 'status_id', 'created_at'];
+        
+        if ($sort && in_array($sort, $allowedSorts)) {
+            $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+            $query->orderBy($sort, $direction);
+        } else {
+            $query->latest();
+        }
+
+        // 4. Paginación preservando parámetros
+        $orders = $query->paginate(15)->appends(compact('search', 'status', 'sort', 'direction'));
 
         return view('admin.orders.index', compact('orders', 'search', 'status'));
     }
