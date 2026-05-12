@@ -13,28 +13,39 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $search = $request->query('search');
-        $roleId = $request->query('role'); // Capturamos el nuevo filtro
+        $roleId = $request->query('role');
+        $sort = $request->query('sort');
+        $direction = $request->query('direction', 'desc');
 
-        $users = User::query()
-            ->when($search, fn ($q) =>
-                // Agrupamos los OR para que no rompan el filtro de roles
-                $q->where(fn($query) =>
-                    $query->where('first_name', 'ilike', "%{$search}%")
-                          ->orWhere('last_name', 'ilike', "%{$search}%")
-                          ->orWhere('email', 'ilike', "%{$search}%")
-                )
-            )
-            ->when($roleId, fn ($q) =>
-                // Filtramos por la relación muchos a muchos
-                $q->whereHas('roles', fn ($query) => $query->where('roles.id', $roleId))
-            )
-            ->with('roles')
-            ->orderBy('created_at', 'desc')
-            ->paginate(15)
-            // Aseguramos que la paginación recuerde ambos filtros
-            ->appends(['search' => $search, 'role' => $roleId]);
+        $query = User::query();
 
-        // Obtenemos los roles para llenar el select de la vista
+        // 1. Filtro de Búsqueda
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('first_name', 'ilike', "%{$search}%")
+                  ->orWhere('last_name', 'ilike', "%{$search}%")
+                  ->orWhere('email', 'ilike', "%{$search}%");
+            });
+        }
+
+        // 2. Filtro por Rol
+        if ($roleId) {
+            $query->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId));
+        }
+
+        // 3. Ordenamiento Dinámico Segurizado
+        $allowedSorts = ['first_name', 'email', 'phone', 'created_at'];
+        
+        if ($sort && in_array($sort, $allowedSorts)) {
+            $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+            $query->orderBy($sort, $direction);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // 4. Paginación preservando todos los parámetros de la URL
+        $users = $query->with('roles')->paginate(15)->withQueryString();
+
         $roles = Role::orderBy('name')->get();
 
         return view('admin.users.index', compact('users', 'search', 'roles', 'roleId'));
@@ -65,9 +76,8 @@ class UserController extends Controller
             'phone'      => $validated['phone'],
         ]);
 
-        // Sincronizar roles
         $user->roles()->sync($validated['roles'] ?? []);
 
-        return redirect()->route('admin.users.index')->with('success', 'Usuario actualizado.');
+        return redirect()->route('admin.users.index')->with('success', 'Usuario actualizado correctamente.');
     }
 }
