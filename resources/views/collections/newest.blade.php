@@ -70,7 +70,7 @@
                 <h3 class="font-serif text-3xl text-gray-900">¿Buscas algo a medida?</h3>
                 <p class="mt-4 font-sans text-gray-500">Nuestros artesanos pueden dar vida a tus ideas únicas.</p>
                 
-                <a href="{{ route('quotation.request') }}" 
+                <a href="{{ route('quotations.index') }}"
                    class="mt-8 inline-block bg-amber-800 text-white px-8 py-4 rounded-lg font-sans text-sm font-bold uppercase tracking-widest hover:bg-amber-900 transition shadow-sm">
                     Solicitar Cotización Personalizada
                 </a>
