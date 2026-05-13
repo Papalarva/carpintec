@@ -1,67 +1,84 @@
 @extends('layouts.admin')
 
 @section('title', 'Editar Cupón')
-@section('header', 'Editar Cupón')
+@section('header', 'Configuración de Cupón')
 
 @section('content')
-<div class="bg-white rounded-xl shadow-sm border border-gray-100 max-w-3xl mx-auto">
+<div class="max-w-3xl mx-auto">
     <form action="{{ route('admin.coupons.update', $coupon) }}" method="POST">
         @csrf
         @method('PUT')
         
-        <div class="p-6 md:p-8">
-            <div class="flex items-center justify-between border-b border-gray-100 pb-4 mb-6">
-                <h3 class="text-lg font-playfair font-semibold text-gray-900">Configuración del Cupón</h3>
-                <span class="font-mono text-sm text-[#C15C3D] bg-[#C15C3D]/10 px-3 py-1 rounded-md border border-[#C15C3D]/20">{{ strtoupper($coupon->code) }}</span>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-6 mb-6">
+                <h3 class="text-xl font-serif font-bold text-gray-900">Editar Código Promocional</h3>
+                <span class="inline-flex items-center px-4 py-2 rounded-lg text-sm font-bold font-mono tracking-widest text-amber-900 bg-amber-50 border-2 border-dashed border-amber-200">
+                    {{ $coupon->code }}
+                </span>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Descuento -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Descuento Asociado <span class="text-rose-500">*</span></label>
-                    <select name="discount_id" required class="block w-full rounded-lg border-gray-200 bg-gray-50 text-sm focus:ring-[#C15C3D] focus:border-[#C15C3D] transition-colors">
-                        <option value="">Selecciona la regla de descuento a aplicar</option>
-                        @foreach($discounts as $id => $name)
-                            <option value="{{ $id }}" {{ old('discount_id', $coupon->discount_id) == $id ? 'selected' : '' }}>{{ $name }}</option>
+            <div class="grid grid-cols-1 gap-8 font-sans">
+                
+                {{-- Descuento --}}
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Campaña / Descuento Asociado <span class="text-red-500">*</span></label>
+                    <select name="discount_id" required class="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 text-sm focus:ring-amber-800 focus:border-amber-800 transition-colors shadow-sm">
+                        @foreach($discounts as $discount)
+                            @php
+                                $valText = $discount->type === \App\Enums\DiscountType::PERCENTAGE ? rtrim(rtrim($discount->value, '0'), '.') . '%' : '$' . number_format($discount->value, 2);
+                            @endphp
+                            <option value="{{ $discount->id }}" {{ old('discount_id', $coupon->discount_id) == $discount->id ? 'selected' : '' }}>
+                                {{ $discount->name }} ({{ $valText }})
+                            </option>
                         @endforeach
                     </select>
-                    @error('discount_id') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    @error('discount_id') <p class="text-red-800 text-xs mt-2 font-bold">{{ $message }}</p> @enderror
                 </div>
 
-                <!-- Código -->
-                <div class="md:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Código Promocional <span class="text-rose-500">*</span></label>
-                    <input type="text" name="code" value="{{ old('code', $coupon->code) }}" required
-                           class="block w-full rounded-lg border-gray-200 bg-gray-50 text-sm font-mono uppercase focus:ring-[#C15C3D] focus:border-[#C15C3D] transition-colors">
-                    @error('code') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
-                </div>
-
-                <!-- Usos Máximos -->
+                {{-- Código Promocional --}}
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Límite de Usos</label>
-                    <input type="number" name="max_uses" min="1" value="{{ old('max_uses', $coupon->max_uses) }}"
-                           class="block w-full rounded-lg border-gray-200 bg-gray-50 text-sm focus:ring-[#C15C3D] focus:border-[#C15C3D] transition-colors">
-                    <p class="text-xs text-gray-500 mt-1">Usados actualmente: <strong class="text-gray-800">{{ $coupon->used_count }}</strong></p>
-                    @error('max_uses') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
+                    <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Código Promocional</label>
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                            <svg class="h-6 w-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z"></path></svg>
+                        </div>
+                        <input type="text" name="code" value="{{ old('code', $coupon->code) }}" required
+                               class="block w-full pl-12 rounded-xl border-dashed border-2 border-amber-200 bg-amber-50 py-4 text-lg font-bold font-mono uppercase text-amber-900 focus:ring-amber-800 focus:border-amber-800 transition-colors">
+                    </div>
+                    @error('code') <p class="text-red-800 text-xs mt-2 font-bold">{{ $message }}</p> @enderror
                 </div>
 
-                <!-- Expiración -->
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora de Expiración</label>
-                    <input type="datetime-local" name="expires_at"
-                           value="{{ old('expires_at', optional($coupon->expires_at)->format('Y-m-d\TH:i')) }}"
-                           class="block w-full rounded-lg border-gray-200 bg-gray-50 text-sm focus:ring-[#C15C3D] focus:border-[#C15C3D] transition-colors">
-                    @error('expires_at') <p class="text-rose-600 text-xs mt-1">{{ $message }}</p> @enderror
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-gray-100 pt-8 mt-2">
+                    {{-- Usos Máximos --}}
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Límite de Usos Totales</label>
+                        <input type="number" name="max_uses" min="1" value="{{ old('max_uses', $coupon->max_uses) }}"
+                               placeholder="Ej. 100"
+                               class="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 text-sm focus:ring-amber-800 focus:border-amber-800 transition-colors shadow-sm">
+                        <p class="text-xs text-gray-500 mt-2 font-sans">
+                            Se ha usado <strong class="text-gray-900">{{ $coupon->used_count }}</strong> veces.
+                        </p>
+                        @error('max_uses') <p class="text-red-800 text-xs mt-2 font-bold">{{ $message }}</p> @enderror
+                    </div>
+
+                    {{-- Expiración --}}
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 uppercase tracking-widest mb-2">Expiración Exacta</label>
+                        <input type="datetime-local" name="expires_at" 
+                               value="{{ old('expires_at', optional($coupon->expires_at)->format('Y-m-d\TH:i')) }}"
+                               class="block w-full rounded-xl border-gray-200 bg-gray-50 py-3.5 text-sm focus:ring-amber-800 focus:border-amber-800 transition-colors shadow-sm">
+                        @error('expires_at') <p class="text-red-800 text-xs mt-2 font-bold">{{ $message }}</p> @enderror
+                    </div>
                 </div>
+
             </div>
         </div>
         
-        <!-- Pie del formulario -->
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-xl flex items-center justify-end gap-3">
-            <a href="{{ route('admin.coupons.index') }}" class="px-5 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+        <div class="flex flex-col sm:flex-row items-center justify-end gap-4 mb-8">
+            <a href="{{ route('admin.coupons.index') }}" class="w-full sm:w-auto bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 uppercase tracking-widest text-sm font-bold rounded-xl px-8 py-4 transition-colors duration-200 shadow-sm font-sans text-center">
                 Cancelar
             </a>
-            <button type="submit" class="px-5 py-2 bg-[#C15C3D] border border-transparent rounded-lg font-medium text-sm text-white hover:bg-[#a34b30] focus:outline-none transition-colors">
+            <button type="submit" class="w-full sm:w-auto bg-amber-900 text-white hover:bg-amber-800 uppercase tracking-widest text-sm font-bold rounded-xl px-8 py-4 transition-colors duration-200 shadow-sm font-sans text-center">
                 Guardar Cambios
             </button>
         </div>
