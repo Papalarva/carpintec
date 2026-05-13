@@ -360,6 +360,12 @@
                         const addedQty = parseInt(formData.get('quantity'));
                         this.disponible -= addedQty;
 
+                        window.dispatchEvent(new CustomEvent('cart-updated', {
+                            detail: {
+                                count: data.count
+                            }
+                        }));
+
                         if (this.disponible < 1) {
                             this.$refs.qtySelect.innerHTML = '<option value="0">0</option>';
                         } else {
