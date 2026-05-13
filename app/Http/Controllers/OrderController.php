@@ -17,8 +17,9 @@ class OrderController extends Controller
         $orders = Order::whereHas('customer', function ($query) {
                 $query->where('user_id', Auth::id());
             })
-            // Eliminamos 'status_id' del array de carga ansiosa
-            ->with(['items.product']) 
+            // Regla de Oro: Evitar N+1. 
+            // Cargamos el producto Y la relación 'media' de Spatie en una sola consulta.
+            ->with(['items.product.media']) 
             ->latest()
             ->paginate(10);
 
@@ -35,8 +36,8 @@ class OrderController extends Controller
             abort(403, 'No tienes permiso para ver este pedido.');
         }
 
-        // Eliminamos 'status_id' del array de carga ansiosa
-        $order->load(['items.product', 'shipment', 'payments']);
+        // Blindamos también la vista de detalles contra el problema N+1
+        $order->load(['items.product.media', 'shipment', 'payments']);
 
         return view('customer.orders.show', compact('order'));
     }

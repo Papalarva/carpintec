@@ -55,12 +55,19 @@
                             <ul class="divide-y divide-gray-100">
                                 @foreach ($order->items as $item)
                                     <li class="py-4 flex flex-col sm:flex-row gap-6 first:pt-0 last:pb-0">
-                                        {{-- Imagen del Producto --}}
+                                        {{-- Imagen del Producto: Búsqueda global de media --}}
                                         <div class="w-full sm:w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                            @if($item->product && $item->product->getFirstMediaUrl('images'))
-                                                <img src="{{ $item->product->getFirstMediaUrl('images') }}" alt="{{ $item->product->name }}" class="w-full h-full object-cover">
+                                            @php
+                                                // SOLUCIÓN: Obtenemos la primera imagen de la relación sin importar el nombre de la colección
+                                                $media = $item->product ? $item->product->media->first() : null;
+                                                $imageUrl = $media ? $media->getUrl() : null;
+                                            @endphp
+                                            
+                                            @if($imageUrl)
+                                                <img src="{{ $imageUrl }}" alt="{{ $item->product->name ?? 'Producto' }}" class="w-full h-full object-cover">
                                             @else
                                                 <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                                    {{-- Nuestro icono outline de 1.5px si el producto genuinamente no tiene fotos en BD --}}
                                                     <svg class="w-8 h-8" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"></path></svg>
                                                 </div>
                                             @endif
