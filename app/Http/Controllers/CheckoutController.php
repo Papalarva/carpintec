@@ -203,15 +203,6 @@ class CheckoutController extends Controller
         }
     }
 
-    /**
-     * Elimina el cupón aplicado.
-     */
-    public function removeCoupon()
-    {
-        session()->forget('checkout.coupon_code');
-        return back()->with('success', 'Cupón eliminado.');
-    }
-
     public function confirmation(\App\Models\Order $order, \Illuminate\Http\Request $request)
     {
         // Usamos ?->id por si el usuario logueado no es cliente (ej. un admin)
@@ -220,5 +211,23 @@ class CheckoutController extends Controller
         }
         
         return view('orders.confirmation', compact('order'));
+    }
+
+     /**
+     * Elimina el cupón aplicado.
+     */
+    public function removeCoupon(Request $request)
+    {
+        session()->forget('checkout.coupon_code');
+
+        // Respondemos con JSON si la petición viene de Alpine.js (Fetch)
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cupón eliminado.'
+            ]);
+        }
+
+        return back()->with('success', 'Cupón eliminado.');
     }
 }

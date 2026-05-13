@@ -60,24 +60,32 @@
                     <!-- Paso 3: Cupón (opcional) -->
                     <div class="bg-white rounded-lg shadow p-6" x-data="couponApp()">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4">3. Cupón de descuento</h2>
+                        
+                        {{-- Regla de Oro: Mostramos errores silenciosos del backend si falló la validación inicial --}}
+                        @if($couponError)
+                            <div class="mb-4 text-sm text-red-700 bg-red-50 p-3 rounded-md border-l-4 border-red-700">
+                                {{ $couponError }}
+                            </div>
+                        @endif
+
                         <div class="flex space-x-2">
-                            <input type="text" x-model="code" placeholder="Código de cupón"
+                            <input type="text" x-model="code" @keydown.enter.prevent="applyCoupon()" placeholder="Código de cupón"
                                    class="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            
                             <button type="button" @click="applyCoupon()"
-                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-sm">
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition text-sm font-semibold">
                                 Aplicar
                             </button>
+                            
                             @if($appliedCoupon)
-                                <button type="button" onclick="document.getElementById('remove-coupon-form').submit()"
-                                        class="px-3 py-2 text-red-600 text-sm hover:underline">
+                                <button type="button" @click="removeCoupon()"
+                                        class="px-3 py-2 text-red-600 text-sm hover:underline font-semibold">
                                     Quitar
                                 </button>
                             @endif
                         </div>
-                        <p x-show="message" :class="success ? 'text-green-600' : 'text-red-600'" class="text-sm mt-2" x-text="message"></p>
-                        <form id="remove-coupon-form" action="{{ route('checkout.remove-coupon') }}" method="POST" class="hidden">
-                            @csrf @method('DELETE')
-                        </form>
+                        
+                        <p x-cloak x-show="message" :class="success ? 'text-green-600' : 'text-red-600'" class="text-sm mt-2" x-text="message"></p>
                     </div>
 
                     <!-- Notas -->
@@ -148,22 +156,50 @@
                 code: '{{ $appliedCoupon ?? '' }}',
                 message: '',
                 success: false,
+                
                 async applyCoupon() {
                     if (!this.code) return;
-                    const resp = await fetch('{{ route('checkout.apply-coupon') }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({ code: this.code })
-                    });
-                    const data = await resp.json();
-                    this.message = data.message;
-                    this.success = data.success;
-                    if (data.success) {
-                        location.reload(); // recargar para actualizar totales
+                    try {
+                        const resp = await fetch('{{ route('checkout.apply-coupon') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ code: this.code })
+                        });
+                        const data = await resp.json();
+                        this.message = data.message;
+                        this.success = data.success;
+                        
+                        if (data.success) {
+                            window.location.reload(); // Recargar para actualizar totales
+                        }
+                    } catch (error) {
+                        this.message = 'Error de conexión al aplicar el cupón.';
+                        this.success = false;
+                    }
+                },
+
+                // SOLUCIÓN: Eliminación asíncrona limpia sin romper el DOM
+                async removeCoupon() {
+                    try {
+                        const resp = await fetch('{{ route('checkout.remove-coupon') }}', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                                'Accept': 'application/json'
+                            }
+                        });
+                        const data = await resp.json();
+                        
+                        if (data.success) {
+                            window.location.reload(); // Recargar para volver a los totales originales
+                        }
+                    } catch (error) {
+                        this.message = 'Error de conexión al eliminar el cupón.';
                     }
                 }
             }

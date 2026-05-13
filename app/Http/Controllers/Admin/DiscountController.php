@@ -200,7 +200,7 @@ class DiscountController extends Controller
             'all'        => 'Todos los productos', 
             'products'   => 'Productos específicos', 
             'categories' => 'Categorías específicas', 
-            'customers'  => 'Clientes específicos' // <--- ¡AQUÍ ESTABA EL ERROR! (Faltaba la 's')
+            'customers'  => 'Clientes específicos' 
         ];
 
         $discount->load('products', 'categories', 'customers');
