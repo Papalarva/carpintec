@@ -1,8 +1,20 @@
 <nav x-data="{ open: false, scrolled: false }" @scroll.window="scrolled = (window.pageYOffset > 20)"
     :class="{ 'bg-white shadow-sm border-gray-100': scrolled, 'bg-transparent border-transparent': !scrolled }"
-    class="fixed w-full z-50 top-0 transition-all duration-500 border-b font-sans">
+    class="fixed w-full z-50 top-0 transition-all duration-500 border-b font-sans flex flex-col">
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    @if (Auth::check() && !Auth::user()->hasVerifiedEmail())
+        <div class="w-full bg-amber-50 border-b border-amber-100 px-4 py-2.5 flex justify-center items-center text-center shadow-sm">
+            <svg class="h-5 w-5 text-amber-900 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+            <span class="text-sm font-sans text-amber-900">
+                Tu cuenta casi está lista. Verifica tu correo para solicitar cotizaciones y realizar compras.
+                <a href="{{ route('verification.notice') }}" class="font-bold underline underline-offset-2 ml-1 hover:text-amber-700 transition-colors">Verificar ahora</a>
+            </span>
+        </div>
+    @endif
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div class="flex justify-between h-20 items-center">
 
             <div class="hidden sm:flex flex-1 items-center space-x-8">
@@ -126,7 +138,7 @@ class="text-sm font-medium tracking-wide text-gray-900 hover:text-amber-800 tran
         x-transition:enter-start="opacity-0 -translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
         x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 -translate-y-1"
-        class="sm:hidden bg-white border-t border-gray-100 shadow-xl absolute w-full" style="display: none;">
+        class="sm:hidden bg-white border-t border-gray-100 shadow-xl w-full" style="display: none;">
 
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('catalog.index')"

@@ -10,18 +10,12 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ConfirmablePasswordController extends Controller
-{
-    /**
-     * Show the confirm password view.
-     */
+{ 
     public function show(): View
     {
         return view('auth.confirm-password');
-    }
+    } 
 
-    /**
-     * Confirm the user's password.
-     */
     public function store(Request $request): RedirectResponse
     {
         if (! Auth::guard('web')->validate([
@@ -29,12 +23,13 @@ class ConfirmablePasswordController extends Controller
             'password' => $request->password,
         ])) {
             throw ValidationException::withMessages([
-                'password' => __('auth.password'),
+                'password' => 'La contraseña proporcionada es incorrecta.',
             ]);
         }
 
         $request->session()->put('auth.password_confirmed_at', time());
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended(route('dashboard', absolute: false))
+            ->with('info', 'Identidad confirmada. Puedes continuar con la acción.');
     }
 }

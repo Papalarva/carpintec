@@ -8,9 +8,6 @@ use Illuminate\Http\Request;
 
 class EmailVerificationNotificationController extends Controller
 {
-    /**
-     * Send a new email verification notification.
-     */
     public function store(Request $request): RedirectResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
@@ -19,6 +16,7 @@ class EmailVerificationNotificationController extends Controller
 
         $request->user()->sendEmailVerificationNotification();
 
-        return back()->with('status', 'verification-link-sent');
+        // Implementación de nuestro sistema de Toasts
+        return back()->with('success', '¡Te hemos enviado un nuevo enlace de verificación! Por favor revisa tu bandeja de entrada o carpeta de spam.');
     }
 }

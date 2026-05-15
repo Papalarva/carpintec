@@ -44,7 +44,11 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Candado en la eliminación de la cuenta
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy')
+        ->middleware('password.confirm'); 
 });
 
 // ─── Catálogo y Carrito ─────────────────────────────────
@@ -75,7 +79,7 @@ Route::get('/mis-compras', [CustomerOrderController::class, 'index'])->name('ord
 Route::get('/mis-compras/{order}', [CustomerOrderController::class, 'show'])->name('orders.show');
 
 // ─── Checkout y Cotizaciones (Público autenticado) ──────
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
     Route::post('/checkout/apply-coupon', [CheckoutController::class, 'applyCoupon'])->name('checkout.apply-coupon');
@@ -89,8 +93,18 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
     Route::get('/cotizaciones/{quotation}/adjunto/{mediaId}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
 
-    Route::patch('/direcciones/{address}/principal', [AddressController::class, 'setPrimary'])->name('addresses.set-primary');
-    Route::resource('addresses', AddressController::class);
+    // Candado para evitar que cambien la dirección de envío por defecto sin contraseña
+    Route::patch('/direcciones/{address}/principal', [AddressController::class, 'setPrimary'])
+        ->name('addresses.set-primary')
+        ->middleware('password.confirm');
+
+    // Separamos el método destroy del resource para protegerlo
+    Route::resource('addresses', AddressController::class)->except(['destroy']);
+    
+    // Candado en la eliminación de direcciones
+    Route::delete('addresses/{address}', [AddressController::class, 'destroy'])
+        ->name('addresses.destroy')
+        ->middleware('password.confirm');
 });
 
 // ==========================================
