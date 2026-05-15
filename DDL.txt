@@ -90,7 +90,7 @@ CREATE TABLE roles ( id uuid DEFAULT gen_random_uuid() NOT NULL, "name" text NOT
 
 -- DROP TABLE users;
 
-CREATE TABLE users ( id uuid DEFAULT gen_random_uuid() NOT NULL, email text NOT NULL, "password" text NOT NULL, first_name text NOT NULL, last_name text NOT NULL, phone text NULL, email_verified_at timestamptz NULL, remember_token text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamptz NULL, CONSTRAINT users_email_key UNIQUE (email), CONSTRAINT users_pkey PRIMARY KEY (id));
+CREATE TABLE users ( id uuid DEFAULT gen_random_uuid() NOT NULL, email text NOT NULL, "password" text NOT NULL, first_name text NOT NULL, last_name text NOT NULL, phone text NULL, email_verified_at timestamptz NULL, remember_token text NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamptz NULL, email_verification_code varchar(255) NULL, CONSTRAINT users_email_key UNIQUE (email), CONSTRAINT users_pkey PRIMARY KEY (id));
 
 
 -- public.categories definition

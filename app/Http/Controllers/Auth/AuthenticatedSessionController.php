@@ -11,56 +11,43 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    /**
-     * Display the login view.
-     */
     public function create(): View
     {
         return view('auth.login');
     }
 
-    /**
-     * Handle an incoming authentication request.
-     */
     public function store(LoginRequest $request): RedirectResponse
     {
         $request->authenticate();
         $request->session()->regenerate();
 
-        // 🚦 EL AGENTE DE TRÁNSITO
-        if ($request->user()->hasAnyRole(['admin', 'worker'])) {
-            
-            // 👇 REVISAMOS SI TIENE LA COOKIE VIP
-            $cookieName = 'trusted_device_' . $request->user()->id;
-            
+        $user = $request->user();
+
+        if ($user->hasAnyRole(['admin', 'worker'])) {
+            $cookieName = 'trusted_device_' . $user->id;
+
             if ($request->hasCookie($cookieName)) {
-                // Le damos el pase directo marcando la sesión
                 session(['2fa_verified' => true]);
-                
-                // CORRECCIÓN: Quitamos el 'intended' para forzar la entrada al panel admin.
-                return redirect()->route('admin.dashboard');
+                return redirect()->route('admin.dashboard')
+                    ->with('success', 'Bienvenido de nuevo, ' . $user->first_name);
             }
-            
-            // Si no tiene la cookie, lo mandamos al flujo normal de seguridad
-            $request->user()->generateTwoFactorCode();
-            return redirect()->route('2fa.index');
+
+            $user->generateTwoFactorCode();
+            return redirect()->route('2fa.index')
+                ->with('info', 'Por favor, verifica el código enviado a tu correo.');
         }
 
-        // CORRECCIÓN: Usamos 'intended' para los clientes, así si venían del carrito, regresan al carrito.
-        return redirect()->intended(route('home'));
+        return redirect()->intended(route('home'))
+            ->with('success', '¡Hola, ' . $user->first_name . '! Que gusto tenerte de vuelta.');
     }
 
-    /**
-     * Destroy an authenticated session.
-     */
     public function destroy(Request $request): RedirectResponse
     {
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/')->with('info', 'Has cerrado sesión exitosamente. ¡Vuelve pronto!');
     }
 }
