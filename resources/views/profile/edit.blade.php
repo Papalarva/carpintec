@@ -3,10 +3,10 @@
         Mi Perfil | Carpintec
     </x-slot:title>
 
-    <div class="bg-gray-50/30 min-h-screen py-12">
-        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-12">
+    <div class="bg-gray-50/30 min-h-screen py-10">
+        <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-8">
             
-            <div class="mb-8 px-4 sm:px-0">
+            <div class="mb-6 px-4 sm:px-0">
                 <h2 class="font-serif text-3xl text-gray-900 leading-tight">
                     Mi Perfil
                 </h2>
