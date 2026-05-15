@@ -25,6 +25,8 @@ use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Admin\CollectionController;
 use App\Http\Controllers\OrderController as CustomerOrderController; // Para evitar conflicto de nombres
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TestQuoteMail;
 
 // ─── Página principal (Tienda / Catálogo) ───────────────
 Route::get('/', [CatalogController::class, 'index'])->name('home');
@@ -149,14 +151,19 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ─── Pruebas ────────────────────────────────────────────
-Route::get('/test-mail', function () {
-    \Illuminate\Support\Facades\Mail::raw(
-        '¡Hola! Conexión Mailtrap funciona.',
-        function ($message) {
-            $message->to('prueba@carpintec.local')->subject('Prueba de Conexión');
-        }
-    );
-    return 'Revisa tu bandeja.';
+// Route::get('/test-mail', function () {
+//     \Illuminate\Support\Facades\Mail::raw(
+//         '¡Hola! Conexión Mailtrap funciona.',
+//         function ($message) {
+//             $message->to('prueba@carpintec.local')->subject('Prueba de Conexión');
+//         }
+//     );
+//     return 'Revisa tu bandeja.';
+// });
+
+Route::get('/test-email', function () {
+    Mail::to('papalarva1@gmail.com')->send(new \App\Mail\TestQuoteMail()); 
+    return "¡Correo enviado con éxito a través de Resend!";
 });
 
 require __DIR__ . '/auth.php';
