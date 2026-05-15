@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class TwoFactorController extends Controller
 {
@@ -15,39 +16,55 @@ class TwoFactorController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'code' => 'required|numeric|digits:6',
-            'remember_device' => 'nullable', // Validamos que exista el campo
+            'code'            => 'required|numeric|digits:6',
+            'remember_device' => 'nullable',
         ]);
 
-        $twoFactor = auth()->user()->twoFactorCodes()
+        $user = auth()->user();
+        $twoFactor = $user->twoFactorCodes()
             ->where('code', $request->code)
             ->first();
 
         if (!$twoFactor) {
-            return back()->withErrors(['code' => 'El código ingresado es incorrecto.']);
+            return back()->withErrors(['code' => 'El código de seguridad ingresado es incorrecto.']);
         }
 
         if ($twoFactor->isExpired()) {
             $twoFactor->delete();
-            return back()->withErrors(['code' => 'El código ha expirado. Por favor, vuelve a iniciar sesión.']);
+            return back()->withErrors(['code' => 'El código ha expirado. Por favor, solicita uno nuevo.']);
         }
 
-        // ¡ÉXITO! Marcamos la sesión y limpiamos la BD
+        // Verificación exitosa
         session(['2fa_verified' => true]);
         $twoFactor->delete();
-
-        // Preparamos la respuesta de redirección
-        $response = redirect()->route('admin.dashboard');
-
-        // 👇 LA MAGIA: Si marcó la casilla, guardamos la cookie
-        if ($request->filled('remember_device')) {
-            // Nombre único por usuario (ej. trusted_device_59b6f7fc...)
-            $cookieName = 'trusted_device_' . auth()->id();
+        
+        $response = redirect()->route('admin.dashboard')
+            ->with('success', 'Verificación exitosa. Bienvenido de nuevo, ' . $user->first_name . '.');
             
-            // Creamos la cookie por 43200 minutos (30 días exactos)
+        if ($request->filled('remember_device')) {
+            $cookieName = 'trusted_device_' . $user->id;
+            // Guardar cookie por 30 días (43200 minutos)
             $response->cookie($cookieName, true, 43200);
         }
 
         return $response;
+    }
+
+    public function resend(Request $request)
+    {
+        $user = auth()->user();
+        
+        try {
+            // Eliminar códigos anteriores para evitar confusiones
+            $user->twoFactorCodes()->delete();
+            
+            // Generar y enviar nuevo código (asume que tu método ya maneja el Mail)
+            $user->generateTwoFactorCode();
+            
+            return back()->with('info', 'Hemos enviado un nuevo código de seguridad a tu correo.');
+        } catch (\Exception $e) {
+            Log::error('Carpintec 2FA Error - No se pudo reenviar el código: ' . $e->getMessage());
+            return back()->with('error', 'Ocurrió un error al intentar reenviar el código.');
+        }
     }
 }

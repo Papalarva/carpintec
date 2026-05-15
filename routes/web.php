@@ -148,22 +148,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
 Route::middleware(['auth'])->group(function () {
     Route::get('/2fa', [TwoFactorController::class, 'index'])->name('2fa.index');
     Route::post('/2fa', [TwoFactorController::class, 'verify'])->name('2fa.verify');
+    Route::post('/2fa/resend', [TwoFactorController::class, 'resend'])->name('2fa.resend');
 });
 
-// ─── Pruebas ────────────────────────────────────────────
-// Route::get('/test-mail', function () {
-//     \Illuminate\Support\Facades\Mail::raw(
-//         '¡Hola! Conexión Mailtrap funciona.',
-//         function ($message) {
-//             $message->to('prueba@carpintec.local')->subject('Prueba de Conexión');
-//         }
-//     );
-//     return 'Revisa tu bandeja.';
-// });
-
-Route::get('/test-email', function () {
-    Mail::to('papalarva1@gmail.com')->send(new \App\Mail\TestQuoteMail()); 
-    return "¡Correo enviado con éxito a través de Resend!";
-});
 
 require __DIR__ . '/auth.php';
