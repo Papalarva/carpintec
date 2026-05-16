@@ -44,11 +44,11 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    
+
     // Candado en la eliminación de la cuenta
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy')
-        ->middleware('password.confirm'); 
+        ->middleware('password.confirm');
 });
 
 // ─── Catálogo y Carrito ─────────────────────────────────
@@ -89,18 +89,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/cotizar/{product?}', [QuotationController::class, 'create'])->name('quotations.create');
     Route::post('/cotizaciones', [QuotationController::class, 'store'])->name('quotations.store');
     Route::get('/cotizaciones', [QuotationController::class, 'index'])->name('quotations.index');
-    Route::get('/cotizaciones/{quotation}/', [QuotationController::class, 'edit'])->name('quotations.edit');
     Route::get('/cotizaciones/{quotation}', [QuotationController::class, 'show'])->name('quotations.show');
     Route::get('/cotizaciones/{quotation}/adjunto/{mediaId}', [QuotationController::class, 'downloadAttachment'])->name('quotations.download');
 
-    // Candado para evitar que cambien la dirección de envío por defecto sin contraseña
+    Route::post('/cotizaciones/{quotation}/mensaje', [QuotationController::class, 'sendMessage'])->name('quotations.message');
+    Route::get('/cotizaciones/{quotation}/checkout', [QuotationController::class, 'checkout'])->name('quotations.checkout');
+    Route::post('/cotizaciones/{quotation}/checkout', [QuotationController::class, 'processCheckout'])->name('quotations.process-checkout');
+    Route::post('/cotizaciones/{quotation}/convertir-a-pedido', [QuotationController::class, 'convertToOrder'])->name('quotations.convert-to-order');
     Route::patch('/direcciones/{address}/principal', [AddressController::class, 'setPrimary'])
         ->name('addresses.set-primary')
         ->middleware('password.confirm');
 
     // Separamos el método destroy del resource para protegerlo
     Route::resource('addresses', AddressController::class)->except(['destroy']);
-    
+
     // Candado en la eliminación de direcciones
     Route::delete('addresses/{address}', [AddressController::class, 'destroy'])
         ->name('addresses.destroy')
@@ -140,7 +142,8 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
     Route::put('quotations/{quotation}/update-status', [AdminQuotationController::class, 'updateStatus'])->name('quotations.update-status');
     Route::post('quotations/{quotation}/convert-to-order', [AdminQuotationController::class, 'convertToOrder'])->name('quotations.convert-to-order');
     Route::get('quotations/{quotation}/file/{media}', [AdminQuotationController::class, 'downloadFile'])->name('quotations.download-file');
-
+    Route::post('quotations/{quotation}/message', [AdminQuotationController::class, 'sendMessage'])->name('quotations.message');
+    
     // --- RUTAS FALTANTES RECUPERADAS: ÓRDENES ADMIN ---
     Route::put('orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::put('orders/{order}/update-shipment', [OrderController::class, 'updateShipment'])->name('orders.update-shipment');

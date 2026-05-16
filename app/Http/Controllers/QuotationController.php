@@ -8,14 +8,11 @@ use App\Models\Product;
 use App\Models\Quotation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; 
-// use App\Events\QuotationRequested; <-- Para implementar en el futuro
 
 class QuotationController extends Controller
 {
-
     public function create(?Product $product = null)
     {
-        // Validación: Solo los clientes pueden crear cotizaciones
         if (!Auth::user()->customer) {
             return redirect()->route('dashboard')->with('error', 'Debes completar tu perfil de cliente para solicitar una cotización.');
         }
@@ -28,66 +25,129 @@ class QuotationController extends Controller
     {
         $customer = Auth::user()->customer;
         
-        // Protección extra
         if (!$customer) {
             return redirect()->route('dashboard')->with('error', 'Perfil de cliente no encontrado.');
         }
 
         $data = $request->validated();
-        
         $data['customer_id'] = $customer->id;
-        
-        // Regla 2: Usamos el Enum estricto en lugar de texto plano
         $data['status'] = QuotationStatus::PENDING;
-
-        // Limpiamos los attachments del request para que no intente guardarlos en el JSONB
+        
+        // Evitamos intentar guardar el arreglo de archivos en la base de datos relacional
         unset($data['attachments']);
 
         $quotation = Quotation::create($data);
 
-        // Regla 1: ALMACENAMIENTO SEGURO CON SPATIE MEDIALIBRARY
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                // Indicamos explícitamente el disco 'public'
                 $quotation->addMedia($file)->toMediaCollection('quotation_files', 'public');
             }
-        }
-
-        // Disparamos un evento para enviar correos sin bloquear el render de la página
-        // event(new QuotationRequested($quotation)); 
+        }       
 
         return redirect()->route('quotations.index')
             ->with('success', 'Tu solicitud de cotización ha sido enviada. Te contactaremos pronto.');
     }
 
-    /**
-     * Lista las cotizaciones del cliente autenticado.
-     */
     public function index()
     {
         $customer = Auth::user()->customer;
-
-        // SOLUCIÓN AL ERROR: Evitamos que intente buscar cotizaciones si no es cliente
         if (!$customer) {
             return redirect()->route('dashboard')->with('error', 'Solo los perfiles de cliente tienen historial de cotizaciones.');
         }
-
-        // Agregamos paginación en lugar de get() para que no se rompa si el cliente tiene 500 cotizaciones
         $quotations = $customer->quotations()->latest()->paginate(15);
 
         return view('quotations.index', compact('quotations'));
     }
 
-    // Método para convertir cotización en pedido (será llamado desde Chat 3)
     public function convertToOrder(Quotation $quotation)
     {
-        // Lógica de conversión (a implementar en Chat 3)
         return redirect()->back()->with('info', 'Funcionalidad en desarrollo.');
+    } 
+
+    public function downloadAttachment(Quotation $quotation, $mediaId)
+    {
+        if ($this->isNotOwner($quotation)) {
+            abort(403, 'No tienes permiso para descargar los archivos de esta cotización.');
+        }
+        
+        $media = \App\Models\Media::findOrFail($mediaId);
+        
+        if ((string) $media->model_id !== (string) $quotation->id) {
+            abort(403, 'Permiso denegado: Este archivo no pertenece a la cotización actual.');
+        }
+        
+        $path = $media->getPath();
+        
+        if (!file_exists($path)) {
+            return back()->with('error', 'El archivo físico ya no se encuentra disponible en el servidor.');
+        }
+        
+        return response()->download($path, $media->file_name);
     }
 
-    /**
-     * Muestra el detalle de una cotización.
-     */
+    private function isNotOwner(Quotation $quotation): bool
+    {
+        $customer = Auth::user()->customer;
+        return !$customer || $quotation->customer_id !== $customer->id;
+    } 
+
+    public function checkout(Quotation $quotation)
+    {
+        if ($this->isNotOwner($quotation)) abort(403);
+
+        // Solo se puede pagar si ya tiene precio y está cotizada o aprobada
+        if (!in_array($quotation->status->value, ['quoted', 'approved']) || !$quotation->estimated_price) {
+            return redirect()->route('quotations.show', $quotation)
+                ->with('error', 'Esta cotización aún no está lista para pago.');
+        }
+
+        $customer = Auth::user()->customer;
+        $addresses = $customer->addresses()->latest()->get();
+
+        // Si no tiene direcciones, lo mandamos a crear una y lo devolvemos aquí
+        if ($addresses->isEmpty()) {
+            session(['url.intended.address' => route('quotations.checkout', $quotation)]);
+            return redirect()->route('addresses.create')
+                ->with('info', 'Por favor, agrega una dirección de envío para continuar.');
+        }
+
+        return view('quotations.checkout', compact('quotation', 'addresses'));
+    }
+
+    public function processCheckout(Request $request, Quotation $quotation)
+    {
+        if ($this->isNotOwner($quotation)) abort(403);
+
+        $request->validate([
+            'address_id' => 'required|exists:addresses,id',
+            'notes'      => 'nullable|string|max:1000',
+        ]);
+
+        // Aseguramos que la dirección pertenezca al cliente
+        $address = \App\Models\Address::where('id', $request->address_id)
+            ->where('customer_id', Auth::user()->customer->id)
+            ->firstOrFail();
+
+        // AQUÍ SE CREA EL PEDIDO (Order)
+        // Como el módulo de Orders lo haremos después, dejamos la estructura base preparada:
+        /*
+        $order = Order::create([
+            'customer_id' => Auth::user()->customer->id,
+            'address_id'  => $address->id,
+            'total'       => $quotation->estimated_price,
+            'notes'       => $request->notes,
+            'status'      => 'pending_payment',
+            'is_custom'   => true, // Bandera para saber que viene de cotización
+        ]);
+        */
+
+        // Por ahora, solo cambiamos el estado de la cotización a Aprobada/Procesando
+        $quotation->update(['status' => 'approved']);
+
+        return redirect()->route('quotations.index')
+            ->with('success', '¡Pedido confirmado! Hemos recibido tu solicitud de fabricación. Te enviaremos los detalles de pago a tu correo.');
+    }
+    
     public function show(Quotation $quotation)
     {
         if ($this->isNotOwner($quotation)) {
@@ -95,47 +155,31 @@ class QuotationController extends Controller
                 ->with('error', 'Acceso denegado. Esta cotización no pertenece a tu cuenta.');
         }
 
+        // Cargamos la relación de mensajes y sus imágenes (media)
+        $quotation->load(['product', 'media', 'messages.media']);
+
         return view('quotations.show', compact('quotation'));
     }
 
-    /**
-     * Descarga archivos adjuntos de forma segura (Compatible con UUID).
-     */
-    public function downloadAttachment(Quotation $quotation, $mediaId)
+    public function sendMessage(Request $request, Quotation $quotation)
     {
-        // 1. Seguridad: Verificar que el cliente logueado sea el dueño de la cotización
-        if ($this->isNotOwner($quotation)) {
-            abort(403, 'No tienes permiso para descargar los archivos de esta cotización.');
+        if ($this->isNotOwner($quotation)) abort(403);
+
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'chat_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120', // Max 5MB
+        ]);
+
+        $message = \App\Models\QuotationMessage::create([
+            'quotation_id' => $quotation->id,
+            'sender_type'  => 'customer',
+            'message'      => strip_tags($request->message),
+        ]);
+
+        if ($request->hasFile('chat_image')) {
+            $message->addMediaFromRequest('chat_image')->toMediaCollection('chat_images', 'public');
         }
 
-        // 2. Usar el modelo de Media personalizado que entiende UUIDs
-        $media = \App\Models\Media::findOrFail($mediaId);
-
-        // 3. Validación estricta casteando a string para evitar falsos negativos
-        if ((string) $media->model_id !== (string) $quotation->id) {
-            abort(403, 'Permiso denegado: Este archivo no pertenece a la cotización actual.');
-        }
-
-        // 4. Obtener la ruta física del archivo
-        $path = $media->getPath();
-
-        // 5. Manejo de error silencioso con Toast si el archivo no existe físicamente
-        if (!file_exists($path)) {
-            return back()->with('error', 'El archivo físico ya no se encuentra disponible en el servidor.');
-        }
-
-        // 6. Forzar la descarga con su nombre original
-        return response()->download($path, $media->file_name);
-    }
-
-    /**
-     * Verifica si la cotización NO pertenece al cliente autenticado.
-     */
-    private function isNotOwner(Quotation $quotation): bool
-    {
-        $customer = Auth::user()->customer;
-        
-        // Si no hay perfil de cliente, o el ID no coincide, bloqueamos el acceso
-        return !$customer || $quotation->customer_id !== $customer->id;
+        return back();
     }
 }

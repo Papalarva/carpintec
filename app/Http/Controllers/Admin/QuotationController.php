@@ -54,19 +54,6 @@ class QuotationController extends Controller
         return view('admin.quotations.index', compact('quotations', 'search', 'status'));
     }
 
-    public function show(Quotation $quotation)
-    {
-        $quotation->load([
-            'customer.user' => function($query) {
-                $query->withTrashed();
-            }, 
-            'product', 
-            'media'
-        ]);
-        
-        return view('admin.quotations.show', compact('quotation'));
-    }
-
     public function updateStatus(Request $request, Quotation $quotation)
     {
         $validated = $request->validate([
@@ -84,7 +71,7 @@ class QuotationController extends Controller
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
-                $quotation->addMedia($file)->toMediaCollection('quotation_files', 'public');
+                $quotation->addMedia($file)->toMediaCollection('admin_quotation_files', 'public');
             }
         }
 
@@ -112,5 +99,38 @@ class QuotationController extends Controller
         }
 
         return response()->download($path, $media->file_name);
+    } 
+
+    public function show(Quotation $quotation)
+    {
+        $quotation->load([
+            'customer.user' => function($query) {
+                $query->withTrashed();
+            }, 
+            'product', 
+            'media',
+            'messages.media' // Cargamos las imágenes del chat
+        ]);
+        
+        return view('admin.quotations.show', compact('quotation'));
+    }
+
+    public function sendMessage(Request $request, Quotation $quotation)
+    {
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'chat_image' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
+        ]);
+
+        $message = $quotation->messages()->create([
+            'sender_type' => 'admin',
+            'message'     => strip_tags($request->message),
+        ]);
+
+        if ($request->hasFile('chat_image')) {
+            $message->addMediaFromRequest('chat_image')->toMediaCollection('chat_images', 'public');
+        }
+
+        return back()->with('success', 'Mensaje enviado al cliente.');
     }
 }

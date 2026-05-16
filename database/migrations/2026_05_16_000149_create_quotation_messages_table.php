@@ -11,8 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('subscribers', function (Blueprint $table) {
-            $table->id();
+        Schema::create('quotation_messages', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+
+            $table->foreignUuid('quotation_id')->constrained()->cascadeOnDelete();
+            $table->enum('sender_type', ['customer', 'admin']);
+            $table->text('message');
             $table->timestamps();
         });
     }
@@ -22,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('subscribers');
+        Schema::dropIfExists('quotation_messages');
     }
 };

@@ -65,4 +65,9 @@ class Quotation extends Model implements HasMedia
     {
         return $query->where('status', QuotationStatus::PENDING);
     }
+
+    public function messages()
+    {
+        return $this->hasMany(QuotationMessage::class)->orderBy('created_at', 'asc');
+    }
 }
