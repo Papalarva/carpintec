@@ -6,17 +6,25 @@
         <meta name="robots" content="index, follow">
     @endpush
 
-    <!-- El x-data principal controla el estado del panel lateral -->
-    <div class="bg-gray-50/30 min-h-screen pt-12 pb-24" x-data="{ isFiltersOpen: false }">
+    <div class="bg-gray-50/30 min-h-screen pt-12 pb-24" x-data="{ 
+        isFiltersOpen: false,
+        init() {
+            this.$watch('isFiltersOpen', value => {
+                if (value) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            });
+        }
+    }">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             
-            <!-- Cabecera del Catálogo (Minimalista) -->
             <div class="flex items-end justify-between border-b border-gray-200 pb-6 mb-12">
                 <h1 class="text-4xl font-serif font-bold tracking-tight text-gray-900">
                     Catálogo de muebles
                 </h1>
                 
-                <!-- Botón Trigger de Filtros -->
                 <button @click="isFiltersOpen = true" 
                         class="group flex items-center space-x-2 text-sm font-bold uppercase tracking-widest text-gray-900 hover:text-amber-800 transition-colors focus:outline-none">
                     <span>Filtrar y Explorar</span>
@@ -24,7 +32,6 @@
                         <svg class="h-5 w-5 text-gray-400 group-hover:text-amber-800 transition-colors" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
                         </svg>
-                        <!-- Puntito ámbar indicador si hay filtros activos -->
                         @if(request()->anyFilled(['search', 'min_price', 'max_price', 'category']))
                             <span class="absolute -top-1 -right-1 block h-2.5 w-2.5 rounded-full bg-amber-700 ring-2 ring-white"></span>
                         @endif
@@ -32,11 +39,9 @@
                 </button>
             </div>
 
-            <!-- Listado de productos (Lienzo completo, sin sidebar) -->
             @if ($products->count())
                 <div class="grid grid-cols-1 gap-y-16 gap-x-12 sm:grid-cols-2 lg:grid-cols-3">
                     @foreach ($products as $product)
-                        <!-- Tarjeta Premium (Aspect-square, enlace invisible) -->
                         <div class="group relative flex flex-col h-full rounded-2xl bg-transparent transition-all duration-300 cursor-pointer">
                             
                             @php $isOutOfStock = $product->track_inventory && ($product->inventory?->quantity ?? 0) < 1; @endphp
@@ -67,7 +72,6 @@
                                 </div>
                                 <h3 class="text-xl font-serif font-bold text-gray-900 leading-snug group-hover:text-amber-800 transition-colors mb-2 flex-grow">
                                     <a href="{{ route('catalog.show', $product->slug) }}">
-                                        <!-- Enlace invisible que cubre toda la tarjeta -->
                                         <span aria-hidden="true" class="absolute inset-0 z-10"></span>
                                         {{ $product->name }}
                                     </a>
@@ -94,10 +98,8 @@
             @endif
         </div>
 
-        <!-- PANEL OFF-CANVAS (Filtros y Categorías) -->
         <div class="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true" x-show="isFiltersOpen" x-cloak>
             
-            <!-- Fondo Oscuro Desenfocado -->
             <div class="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm transition-opacity"
                  x-show="isFiltersOpen"
                  x-transition:enter="ease-in-out duration-500"
@@ -111,7 +113,6 @@
                 <div class="absolute inset-0 overflow-hidden">
                     <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
                         
-                        <!-- Contenedor Blanco del Panel -->
                         <div class="pointer-events-auto w-screen max-w-md transform transition"
                              x-show="isFiltersOpen"
                              @click.away="isFiltersOpen = false"
@@ -124,7 +125,6 @@
                             
                             <div class="flex h-full flex-col overflow-y-auto bg-white shadow-2xl">
                                 
-                                <!-- Header del Panel -->
                                 <div class="flex items-center justify-between px-8 py-6 border-b border-gray-100">
                                     <h2 class="text-2xl font-serif font-bold text-gray-900" id="slide-over-title">Explorar</h2>
                                     <button type="button" @click="isFiltersOpen = false" class="relative text-gray-400 hover:text-gray-900 transition-colors focus:outline-none">
@@ -135,12 +135,10 @@
                                     </button>
                                 </div>
 
-                                <!-- Formulario de Filtros -->
                                 <form method="GET" action="{{ route('catalog.index') }}" class="flex-1 flex flex-col">
                                     
                                     <div class="px-8 py-8 flex-1">
                                         
-                                        <!-- Búsqueda -->
                                         <div class="mb-10">
                                             <label for="search" class="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Búsqueda Rápida</label>
                                             <input type="text" name="search" id="search" value="{{ $search ?? '' }}" 
@@ -148,7 +146,6 @@
                                                    class="block w-full rounded-none border-0 border-b-2 border-gray-200 focus:border-amber-800 focus:ring-0 sm:text-base transition-colors placeholder:text-gray-300 px-0 py-2">
                                         </div>
 
-                                        <!-- Categorías (Navegación tipo Índice) -->
                                         <div class="mb-12">
                                             <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5">Categorías</h3>
                                             @if(request('category'))
@@ -182,7 +179,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Precios -->
                                         <div>
                                             <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4">Rango de Precio</h3>
                                             <div class="grid grid-cols-2 gap-6">
@@ -203,7 +199,6 @@
 
                                     </div>
 
-                                    <!-- Footer del Panel (Botones) -->
                                     <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 space-y-3">
                                         <button type="submit" 
                                                 class="w-full flex justify-center items-center rounded-xl bg-amber-900 px-6 py-4 text-sm font-bold tracking-wide text-white shadow-sm hover:bg-amber-800 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-800 focus:ring-offset-2">
