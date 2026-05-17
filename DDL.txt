@@ -66,6 +66,15 @@ CREATE TABLE migrations ( id serial4 NOT NULL, migration varchar(255) NOT NULL, 
 CREATE TABLE order_statuses ( id int2 NOT NULL, "name" text NOT NULL, CONSTRAINT order_statuses_name_key UNIQUE (name), CONSTRAINT order_statuses_pkey PRIMARY KEY (id));
 
 
+-- public.password_reset_tokens definition
+
+-- Drop table
+
+-- DROP TABLE password_reset_tokens;
+
+CREATE TABLE password_reset_tokens ( email varchar(255) NOT NULL, "token" varchar(255) NOT NULL, created_at timestamp(0) NULL, CONSTRAINT password_reset_tokens_pkey PRIMARY KEY (email));
+
+
 -- public.payment_statuses definition
 
 -- Drop table
@@ -193,7 +202,7 @@ CREATE TABLE two_factor_codes ( id bigserial NOT NULL, user_id uuid NOT NULL, co
 
 -- DROP TABLE addresses;
 
-CREATE TABLE addresses ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, alias text NULL, street text NOT NULL, exterior_number text NOT NULL, interior_number text NULL, neighborhood text NOT NULL, city text NOT NULL, state text NOT NULL, postal_code text NOT NULL, country text DEFAULT 'México'::text NOT NULL, contact_phone text NULL, is_primary bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT addresses_pkey PRIMARY KEY (id), CONSTRAINT addresses_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE);
+CREATE TABLE addresses ( id uuid DEFAULT gen_random_uuid() NOT NULL, customer_id uuid NOT NULL, alias text NULL, street text NOT NULL, exterior_number text NOT NULL, interior_number text NULL, neighborhood text NOT NULL, city text NOT NULL, state text NOT NULL, postal_code text NOT NULL, country text DEFAULT 'México'::text NOT NULL, contact_phone text NULL, is_primary bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, updated_at timestamptz DEFAULT now() NOT NULL, deleted_at timestamp(0) NULL, CONSTRAINT addresses_pkey PRIMARY KEY (id), CONSTRAINT addresses_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE);
 
 
 -- public.carts definition
@@ -248,6 +257,15 @@ CREATE TABLE inventory_movements ( id uuid DEFAULT gen_random_uuid() NOT NULL, p
 -- DROP TABLE product_images;
 
 CREATE TABLE product_images ( id uuid DEFAULT gen_random_uuid() NOT NULL, product_id uuid NOT NULL, webp_path text NOT NULL, sort_order int4 DEFAULT 0 NULL, is_cover bool DEFAULT false NULL, created_at timestamptz DEFAULT now() NOT NULL, CONSTRAINT product_images_pkey PRIMARY KEY (id), CONSTRAINT product_images_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE);
+
+
+-- public.quotation_messages definition
+
+-- Drop table
+
+-- DROP TABLE quotation_messages;
+
+CREATE TABLE quotation_messages ( id uuid NOT NULL, quotation_id uuid NOT NULL, sender_type varchar(255) NOT NULL, message text NOT NULL, created_at timestamp(0) NULL, updated_at timestamp(0) NULL, CONSTRAINT quotation_messages_pkey PRIMARY KEY (id), CONSTRAINT quotation_messages_sender_type_check CHECK (((sender_type)::text = ANY ((ARRAY['customer'::character varying, 'admin'::character varying])::text[]))), CONSTRAINT quotation_messages_quotation_id_foreign FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE);
 
 
 -- public.shipments definition

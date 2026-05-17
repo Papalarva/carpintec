@@ -9,25 +9,21 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\Relation; 
 use App\Models\QuotationMessage;
 use App\Observers\QuotationMessageObserver;
+// ¡Nuevas importaciones necesarias!
+use App\Models\Order;
+use App\Observers\OrderObserver;
 
 class AppServiceProvider extends ServiceProvider
-{
-    /**
-     * Register any application services.
-     */
+{ 
     public function register(): void
     {
         $this->app->singleton(CartManager::class, function () {
             return new CartManager();
         });
-    }
+    } 
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // 2. Le enseñamos a Eloquent a mapear el texto 'User' de la BD a tu modelo real
         Relation::enforceMorphMap([
             'User' => \App\Models\User::class,
             'Product' => \App\Models\Product::class,
@@ -35,14 +31,14 @@ class AppServiceProvider extends ServiceProvider
             'quotation_message' => \App\Models\QuotationMessage::class,
         ]);
 
-        // Enseñamos a Blade a entender @role y @endrole
         Blade::if('role', function (string|array $roles) {
             $user = Auth::user();
             return $user !== null && method_exists($user, 'hasRole') && call_user_func([$user, 'hasRole'], $roles);
         }); 
 
+        // Registro de Observers
         QuotationMessage::observe(QuotationMessageObserver::class);
-
+        Order::observe(OrderObserver::class); 
     }
 
     public function hasRole($roles): bool

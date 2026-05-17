@@ -97,7 +97,7 @@
                 <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-2">Teléfono para recibir entregas</label>
                 <input type="tel" name="contact_phone" id="contact_phone" 
                        value="{{ old('contact_phone', $address->contact_phone ?? '') }}" 
-                       maxlength="15" 
+                       maxlength="10" 
                        inputmode="numeric"
                        @input="$el.value = $el.value.replace(/[^0-9]/g, '')"
                        class="w-full rounded-xl border-gray-200 py-3.5 focus:border-amber-800 focus:ring-amber-800 shadow-sm transition-colors placeholder-gray-400" placeholder="10 dígitos mínimo">
