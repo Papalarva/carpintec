@@ -24,7 +24,7 @@
         {{-- 2. Sección de Historia (Imagen + Texto cruzado) --}}
         <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                {{-- Placeholder de Imagen Premium --}}
+                {{-- Placeholder de Imagen --}}
                 <div class="relative group">
                     <div
                         class="absolute inset-0 bg-amber-900/10 transform translate-x-4 translate-y-4 rounded-2xl transition-transform duration-500 group-hover:translate-x-2 group-hover:translate-y-2">

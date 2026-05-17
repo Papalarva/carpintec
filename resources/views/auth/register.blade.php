@@ -126,7 +126,7 @@
 
         <div class="hidden lg:flex lg:w-1/2 relative bg-gray-900 items-center justify-center p-12">
             <div class="absolute inset-0 bg-cover bg-center opacity-40" 
-                 style="background-image: url('https://images.unsplash.com/photo-1618220179428-22790b461013?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');">
+                 style="background-image: url({{ Vite::asset('resources/images/auth/login.jpeg') }});">
             </div>
             
             <div class="relative z-10 max-w-lg text-center">

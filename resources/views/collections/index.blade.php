@@ -2,7 +2,7 @@
     <x-slot:title>Colecciones - Carpintec</x-slot:title>
 
     @push('head')
-        <meta name="description" content="Nuestras colecciones curadas de muebles premium.">
+        <meta name="description" content="Nuestras colecciones curadas de muebles.">
         <meta name="robots" content="index, follow">
     @endpush
 

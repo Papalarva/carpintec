@@ -2,7 +2,7 @@
     <x-slot:title>Catálogo - Carpintec</x-slot:title>
 
     @push('head')
-        <meta name="description" content="Catálogo de muebles premium en México.">
+        <meta name="description" content="Catálogo de muebles en México.">
         <meta name="robots" content="index, follow">
     @endpush
 

@@ -11,34 +11,29 @@
             <thead class="bg-gray-50/80">
                 <tr>
                     @foreach($headers as $key => $value)
-                        @php
-                            // Lógica de compatibilidad:
-                            // Si mandas ['Nombre'], $key es numérico (0) y $value es 'Nombre' (No ordenable).
-                            // Si mandas ['Nombre' => 'name'], $key es 'Nombre' y $value es 'name' (Ordenable).
+                        @php 
                             $isSortable = !is_numeric($key) && !empty($value);
                             $label = is_numeric($key) ? $value : $key;
                             $column = $isSortable ? $value : null;
                         @endphp
 
-                        <th scope="col" class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider font-sans {{ $isSortable ? 'text-gray-900' : 'text-gray-500' }}">
+                        <th scope="col" class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest font-sans {{ $isSortable ? 'text-gray-900' : 'text-gray-500' }}">
                             @if($isSortable)
-                                @php
-                                    // Alternar dirección si ya estamos ordenando por esta columna
+                                @php 
                                     $isAsc = $currentSort === $column && $currentDirection === 'asc';
                                     $nextDirection = $isAsc ? 'desc' : 'asc';
                                     $sortUrl = request()->fullUrlWithQuery(['sort' => $column, 'direction' => $nextDirection]);
                                 @endphp
-                                <a href="{{ $sortUrl }}" class="group inline-flex items-center gap-1.5 hover:text-amber-900 transition-colors">
+                                <a href="{{ $sortUrl }}" class="group inline-flex items-center gap-1.5 hover:text-brand transition-colors">
                                     {{ $label }}
                                     <span class="relative flex items-center">
                                         @if($currentSort === $column)
                                             @if($currentDirection === 'asc')
-                                                <svg class="w-4 h-4 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+                                                <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
                                             @else
-                                                <svg class="w-4 h-4 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                                                <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                                             @endif
-                                        @else
-                                            {{-- Icono neutral (arriba/abajo) oculto por defecto, aparece en hover --}}
+                                        @else 
                                             <svg class="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>
                                         @endif
                                     </span>
@@ -50,7 +45,7 @@
                     @endforeach
                 </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-50 font-sans">
+            <tbody class="bg-white divide-y divide-gray-100 font-sans">
                 {{ $slot }}
             </tbody>
         </table>

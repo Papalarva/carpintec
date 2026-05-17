@@ -2,7 +2,7 @@
     <div class="min-h-screen flex w-full">
         
         <div class="hidden lg:flex w-1/2 bg-gray-900 relative items-center justify-center">
-            <div class="absolute inset-0 bg-cover bg-center opacity-40" style="background-image: url('https://images.unsplash.com/photo-1618220179428-22790b461013?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');"></div>
+            <div class="absolute inset-0 bg-cover bg-center opacity-40" style="background-image: url({{ Vite::asset('resources/images/auth/login.jpeg') }});"></div>
             <div class="relative z-10 text-center px-12">
                 <h1 class="text-white font-serif text-5xl tracking-tight mb-4">Carpintec</h1>
                 <p class="text-gray-200 font-sans text-lg font-light tracking-wide">La esencia de la madera, a tu medida.</p>
