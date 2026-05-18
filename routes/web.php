@@ -142,6 +142,7 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
 // 🔒 ZONA EXCLUSIVA: SOLO ADMINS
 // ==========================================
 Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'role:admin']], function () {
+    Route::patch('users/{id}/restore', [UserController::class, 'restore'])->name('users.restore');
     Route::resource('users', UserController::class);
     Route::resource('roles', RoleController::class);
 

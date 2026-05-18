@@ -13,8 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Permission\Traits\HasRoles; 
 
 class User extends Authenticatable implements MustVerifyEmail
-{
-    // 👇 1. Quitamos HasApiTokens y agregamos HasUuids correctamente
+{ 
     use HasFactory, Notifiable, HasRoles, HasUuids, SoftDeletes;
 
     // (Eliminamos $incrementing y $keyType porque el trait HasUuids ya lo hace por nosotros en automático)

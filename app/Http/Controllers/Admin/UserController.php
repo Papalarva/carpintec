@@ -14,12 +14,20 @@ class UserController extends Controller
     {
         $search = $request->query('search');
         $roleId = $request->query('role');
+        $accountStatus = $request->query('account_status', 'active'); // Nuevo filtro
         $sort = $request->query('sort');
         $direction = $request->query('direction', 'desc');
 
         $query = User::query();
 
-        // 1. Filtro de Búsqueda
+        // 1. Filtro de Estado de Cuenta (Soft Deletes)
+        if ($accountStatus === 'disabled') {
+            $query->onlyTrashed();
+        } elseif ($accountStatus === 'all') {
+            $query->withTrashed();
+        }
+
+        // 2. Filtro de Búsqueda
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('first_name', 'ilike', "%{$search}%")
@@ -28,12 +36,12 @@ class UserController extends Controller
             });
         }
 
-        // 2. Filtro por Rol
+        // 3. Filtro por Rol
         if ($roleId) {
             $query->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId));
         }
 
-        // 3. Ordenamiento Dinámico Segurizado
+        // 4. Ordenamiento Dinámico Segurizado
         $allowedSorts = ['first_name', 'email', 'phone', 'created_at'];
         
         if ($sort && in_array($sort, $allowedSorts)) {
@@ -43,12 +51,11 @@ class UserController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        // 4. Paginación preservando todos los parámetros de la URL
+        // 5. Paginación preservando todos los parámetros
         $users = $query->with('roles')->paginate(15)->withQueryString();
-
         $roles = Role::orderBy('name')->get();
 
-        return view('admin.users.index', compact('users', 'search', 'roles', 'roleId'));
+        return view('admin.users.index', compact('users', 'search', 'roles', 'roleId', 'accountStatus'));
     }
 
     public function edit(User $user)
@@ -90,6 +97,39 @@ class UserController extends Controller
             return redirect()->back()
                              ->withInput()
                              ->with('error', 'Ocurrió un error al actualizar el usuario. Intenta de nuevo.');
+        }
+    }
+
+    public function destroy(User $user)
+    {
+        // 🛡️ Capa de Seguridad: Prevenir Auto-Bloqueo
+        if (auth()->id() === $user->id) {
+            return redirect()->back()->with('error', 'Por seguridad, no puedes deshabilitar tu propia cuenta activa.');
+        }
+
+        try {
+            // Elimina (Deshabilita) al usuario
+            $user->delete();
+
+            return redirect()->route('admin.users.index')
+                             ->with('success', 'Usuario deshabilitado correctamente del sistema.');
+                             
+        } catch (\Exception $e) {
+            return redirect()->back()
+                             ->with('error', 'Ocurrió un error al intentar deshabilitar al usuario. Verifica las dependencias.');
+        }
+    }
+
+    public function restore($id)
+    {
+        try {
+            // Buscamos específicamente en los eliminados
+            $user = User::onlyTrashed()->findOrFail($id);
+            $user->restore();
+
+            return redirect()->back()->with('success', 'Usuario restaurado y habilitado correctamente.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Ocurrió un error al intentar restaurar al usuario.');
         }
     }
 }

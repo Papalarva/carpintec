@@ -24,7 +24,7 @@ class OrderController extends Controller
         $direction = $request->query('direction', 'desc');
 
         $query = Order::query()
-            ->with(['customer.user' => function($query) {
+            ->with(['customer.user' => function ($query) {
                 $query->withTrashed();
             }]);
 
@@ -34,10 +34,10 @@ class OrderController extends Controller
                 // Casteamos el ID a texto para poder usar LIKE
                 $q->whereRaw('id::text like ?', ["%{$search}%"])
                     ->orWhereHas('customer.user', function ($q) use ($search) {
-                        $q->withTrashed()->where(function($query) use ($search) {
+                        $q->withTrashed()->where(function ($query) use ($search) {
                             $query->where('first_name', 'ilike', "%{$search}%")
-                                  ->orWhere('last_name', 'ilike', "%{$search}%")
-                                  ->orWhere('email', 'ilike', "%{$search}%");
+                                ->orWhere('last_name', 'ilike', "%{$search}%")
+                                ->orWhere('email', 'ilike', "%{$search}%");
                         });
                     });
             });
@@ -50,7 +50,7 @@ class OrderController extends Controller
 
         // 3. Ordenamiento Dinámico (Whitelist)
         $allowedSorts = ['id', 'total', 'status_id', 'created_at'];
-        
+
         if ($sort && in_array($sort, $allowedSorts)) {
             $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
             $query->orderBy($sort, $direction);
@@ -67,15 +67,16 @@ class OrderController extends Controller
     public function show(Order $order)
     {
         $order->load([
-            // CARGAMOS EL USUARIO AUNQUE ESTÉ ELIMINADO
-            'customer.user' => function($query) {
+            'customer.user' => function ($query) {
                 $query->withTrashed();
             },
             'shippingAddress',
             'shipment',
-            'items.product',
+            'items.product' => function ($query) {
+                $query->withTrashed();
+            },
             'payments',
-            'statusHistory.user', // Opcional: También podrías poner withTrashed() aquí si un admin es eliminado
+            'statusHistory.user',
             'quotation',
         ]);
 
@@ -165,10 +166,12 @@ class OrderController extends Controller
         $wasOldStateConsuming = in_array($oldStatus, $consumingStates, true);
 
         // CASO 1: El pedido pasa a un estado que consume stock y no tenía movimientos de salida previos
+
         if ($isNewStateConsuming && !$wasOldStateConsuming) {
             foreach ($order->items as $item) {
-                // Solo descontamos si aún no tiene movimiento de inventario asociado
-                if ($item->inventory_movement_id) {
+
+                $product = $item->product()->withTrashed()->first();
+                if (!$product || !$product->track_inventory) {
                     continue;
                 }
 
@@ -207,8 +210,8 @@ class OrderController extends Controller
         // CASO 2: El pedido se cancela y tenía movimientos de salida (restock)
         if ($newStatus === OrderStatus::CANCELLED && $wasOldStateConsuming) {
             foreach ($order->items as $item) {
-                // Solo restock si tiene movimiento de salida y el producto aún existe
-                if (!$item->inventory_movement_id) {
+                $product = $item->product()->withTrashed()->first();
+                if (!$product || !$product->track_inventory) {
                     continue;
                 }
 
