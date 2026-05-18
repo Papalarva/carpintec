@@ -6,10 +6,11 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Quotation;
 use App\Models\User;
-use App\Models\Inventory; 
+use App\Models\Inventory;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Customer;
+use App\Enums\OrderStatus;
 
 class DashboardController extends Controller
 {
@@ -19,14 +20,14 @@ class DashboardController extends Controller
 
         // 👑 ZONA DEL ADMINISTRADOR (Analítica y Finanzas)
         if ($user->hasRole('admin')) {
-            
+
             $totalRevenue = Order::sum('total') ?? 0;
             $totalOrders = Order::count();
             $newCustomersThisMonth = Customer::whereMonth('created_at', now()->month)->count();
             $pendingQuotations = Quotation::where('status', 'pending')->count();
             $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
-                           ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
-                           ->count();
+                ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
+                ->count();
 
             // Configuración de la gráfica principal
             $salesChartConfig = [
@@ -55,29 +56,40 @@ class DashboardController extends Controller
             ];
 
             return view('admin.dashboard', compact(
-                'totalRevenue', 'totalOrders', 'newCustomersThisMonth', 
-                'pendingQuotations', 'lowStockProducts', 'salesChartConfig',
-                'funnelData', 'topProducts'
+                'totalRevenue',
+                'totalOrders',
+                'newCustomersThisMonth',
+                'pendingQuotations',
+                'lowStockProducts',
+                'salesChartConfig',
+                'funnelData',
+                'topProducts'
             ));
         }
 
         // 👷‍♂️ ZONA DEL WORKER (Operaciones Diarias)
         if ($user->hasRole('worker')) {
-            
+
             $pendingQuotations = Quotation::where('status', 'pending')->count();
             $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')
-                           ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
-                           ->count();
-            $pendingOrders = Order::where('status', 'pending')->count(); // Nueva variable
+                ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
+                ->count();
 
-            // NUEVO: Barra de progreso operativo (Meta del día)
+            $pendingOrders = Order::where('status_id', OrderStatus::PENDING->value)->count();
+            $completedToday = Order::where('status_id', OrderStatus::DELIVERED->value)
+                ->whereDate('updated_at', today())
+                ->count();
+
             $dailyGoal = 15;
-            $completedToday = Order::whereDate('updated_at', today())->where('status', 'shipped')->count();
             $progressPercentage = $dailyGoal > 0 ? min(100, ($completedToday / $dailyGoal) * 100) : 0;
 
             return view('admin.dashboard', compact(
-                'pendingQuotations', 'lowStockProducts', 'pendingOrders',
-                'completedToday', 'dailyGoal', 'progressPercentage'
+                'pendingQuotations',
+                'lowStockProducts',
+                'pendingOrders',
+                'completedToday',
+                'dailyGoal',
+                'progressPercentage'
             ));
         }
 

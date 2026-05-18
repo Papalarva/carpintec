@@ -24,14 +24,14 @@
                                     $nextDirection = $isAsc ? 'desc' : 'asc';
                                     $sortUrl = request()->fullUrlWithQuery(['sort' => $column, 'direction' => $nextDirection]);
                                 @endphp
-                                <a href="{{ $sortUrl }}" class="group inline-flex items-center gap-1.5 hover:text-brand transition-colors">
+                                <a href="{{ $sortUrl }}" class="group inline-flex items-center gap-1.5 hover:text-amber-900 transition-colors">
                                     {{ $label }}
                                     <span class="relative flex items-center">
                                         @if($currentSort === $column)
                                             @if($currentDirection === 'asc')
-                                                <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
+                                                <svg class="w-4 h-4 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" /></svg>
                                             @else
-                                                <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                                                <svg class="w-4 h-4 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
                                             @endif
                                         @else 
                                             <svg class="w-4 h-4 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" /></svg>

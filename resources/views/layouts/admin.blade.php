@@ -71,6 +71,9 @@
                     <x-admin.sidebar-link href="{{ route('admin.quotations.index') }}" :active="request()->routeIs('admin.quotations.*')">
                         Cotizaciones
                     </x-admin.sidebar-link>
+                    <x-admin.sidebar-link href="{{ route('admin.inventory.index') }}" :active="request()->routeIs('admin.inventory.*')">
+                        Inventario
+                    </x-admin.sidebar-link> 
                     <x-admin.sidebar-link href="{{ route('admin.orders.index') }}" :active="request()->routeIs('admin.orders.*')">
                         Pedidos
                     </x-admin.sidebar-link>
@@ -86,9 +89,6 @@
                     <x-admin.sidebar-link href="{{ route('admin.discounts.index') }}" :active="request()->routeIs('admin.discounts.*')">
                         Descuentos
                     </x-admin.sidebar-link>
-                    <x-admin.sidebar-link href="{{ route('admin.inventory.index') }}" :active="request()->routeIs('admin.inventory.*')">
-                        Inventario
-                    </x-admin.sidebar-link> 
                     <x-admin.sidebar-link href="{{ route('admin.coupons.index') }}" :active="request()->routeIs('admin.coupons.*')">
                         Cupones
                     </x-admin.sidebar-link>

@@ -125,6 +125,13 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
     Route::delete('products/{id}/force-delete', [ProductController::class, 'forceDelete'])->name('products.force-delete');
     Route::resource('products', ProductController::class);
 
+        // Inventario
+    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
+    Route::get('inventory/{product}/movements', [InventoryController::class, 'showMovements'])->name('inventory.movements');
+    Route::get('inventory/{product}/adjust', [InventoryController::class, 'createAdjustment'])->name('inventory.adjust');
+    Route::post('inventory/{product}/adjust', [InventoryController::class, 'storeAdjustment'])->name('inventory.store-adjustment');
+
+
     Route::resource('quotations', AdminQuotationController::class)->only(['index', 'show', 'edit', 'update']);
     Route::resource('orders', OrderController::class)->only(['index', 'show']);
 
@@ -148,12 +155,6 @@ Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['auth', 'r
     Route::put('orders/{order}/update-status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::put('orders/{order}/update-shipment', [OrderController::class, 'updateShipment'])->name('orders.update-shipment');
     Route::put('orders/{order}/payments/{payment}/approve', [OrderController::class, 'approvePayment'])->name('orders.approve-payment');
-
-    // Inventario
-    Route::get('inventory', [InventoryController::class, 'index'])->name('inventory.index');
-    Route::get('inventory/{product}/movements', [InventoryController::class, 'showMovements'])->name('inventory.movements');
-    Route::get('inventory/{product}/adjust', [InventoryController::class, 'createAdjustment'])->name('inventory.adjust');
-    Route::post('inventory/{product}/adjust', [InventoryController::class, 'storeAdjustment'])->name('inventory.store-adjustment');
 
     // Descuentos, Cupones y Reportes
     Route::resource('discounts', DiscountController::class);

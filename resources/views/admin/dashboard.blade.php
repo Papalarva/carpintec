@@ -5,11 +5,9 @@
 
 @section('content')
 
-    {{-- Inicializamos Alpine para las animaciones de entrada en cascada --}}
     <div x-data="{ showCards: false, showCharts: false }" 
          x-init="setTimeout(() => showCards = true, 100); setTimeout(() => showCharts = true, 300)">
 
-        {{-- 👑 1. VISTA DE ADMINISTRADOR (Finanzas y Analítica) --}}
         @if(auth()->user()->hasRole('admin'))
             <div class="mb-8" x-show="showCards" x-transition.opacity.duration.700ms x-cloak>
                 <h2 class="text-2xl font-serif font-semibold text-gray-900 tracking-tight">Resumen Financiero</h2>
@@ -31,8 +29,11 @@
                     @if(!empty($salesChartConfig))
                         <x-admin.chart :config="$salesChartConfig" currencyY />
                     @else
-                        <div class="flex items-center justify-center h-64 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                            <span class="text-sm text-gray-400 font-sans">Sin datos suficientes para graficar.</span>
+                        <div class="flex flex-col items-center justify-center h-64 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                            <svg class="h-10 w-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"></path>
+                            </svg>
+                            <span class="text-sm font-medium text-gray-400 font-sans">Sin datos suficientes para graficar.</span>
                         </div>
                     @endif
                 </div>
@@ -45,10 +46,10 @@
                             @foreach($topProducts as $product)
                                 <li class="flex items-center justify-between border-b border-gray-50 pb-3 last:border-0 last:pb-0">
                                     <div class="flex flex-col">
-                                        <span class="text-sm font-medium text-gray-900 font-sans">{{ $product->name }}</span>
-                                        <span class="text-xs text-gray-500 font-sans">{{ $product->sales }} unidades</span>
+                                        <span class="text-sm font-bold text-gray-900 font-sans">{{ $product->name }}</span>
+                                        <span class="text-xs font-medium text-gray-500 font-sans mt-0.5">{{ $product->sales }} unidades</span>
                                     </div>
-                                    <span class="text-sm font-semibold text-gray-900 font-serif">${{ number_format($product->revenue) }}</span>
+                                    <span class="text-sm font-bold text-amber-900 font-serif">${{ number_format($product->revenue) }}</span>
                                 </li>
                             @endforeach
                         </ul>
@@ -60,18 +61,18 @@
         {{-- 👷‍♂️ 2. VISTA DE WORKER (Centro de Tareas Diario) --}}
         @if(auth()->user()->hasRole('worker'))
             <div class="mb-8" x-show="showCards" x-transition.opacity.duration.700ms x-cloak>
-                <h2 class="text-3xl font-serif font-semibold text-gray-900">
+                <h2 class="text-3xl font-serif font-semibold text-gray-900 tracking-tight">
                     Hola {{ auth()->user()->first_name }}, tu plan de hoy.
                 </h2>
                 
                 {{-- Barra de Progreso Operativo --}}
                 <div class="mt-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                    <div class="flex justify-between text-sm font-sans mb-2">
-                        <span class="text-gray-500">Progreso de envíos diarios</span>
-                        <span class="font-bold text-amber-900">{{ $completedToday }} de {{ $dailyGoal }} pedidos</span>
+                    <div class="flex justify-between items-end mb-3">
+                        <span class="text-xs font-bold uppercase tracking-widest text-gray-500 font-sans">Progreso de envíos diarios</span>
+                        <span class="text-sm font-bold text-amber-900 font-sans">{{ $completedToday }} de {{ $dailyGoal }} pedidos</span>
                     </div>
-                    <div class="w-full bg-gray-100 rounded-full h-2.5">
-                        <div class="bg-amber-900 h-2.5 rounded-full transition-all duration-1000" style="width: {{ $progressPercentage }}%"></div>
+                    <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                        <div class="bg-amber-900 h-2.5 rounded-full transition-all duration-1000 ease-out" style="width: {{ $progressPercentage }}%"></div>
                     </div>
                 </div>
             </div>
@@ -109,7 +110,7 @@
                     route="{{ route('admin.inventory.index') }}" 
                     buttonText="Revisar inventario" 
                     icon="warning" 
-                    type="red" 
+                    type="rose" 
                 />
             </div>
         @endif

@@ -1,7 +1,6 @@
 @props(['config', 'currencyY' => false])
 
 @php
-    // Generamos un ID único para el canvas (ej. chart_aB3dEfg) para evitar choques
     $chartId = 'chart_' . Str::random(8);
 @endphp
 
@@ -10,7 +9,6 @@
 </div>
 
 @push('scripts')
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('{{ $chartId }}').getContext('2d');
@@ -25,11 +23,12 @@
                     datasets: [{
                         label: 'Ingresos',
                         data: chartData.data,
-                        borderColor: '#C15C3D', // Nuestro color Terracota
-                        backgroundColor: 'rgba(193, 92, 61, 0.1)',
+                        // Purgado: #C15C3D reemplazado por el hex de amber-900 (#78350f)
+                        borderColor: '#78350f', 
+                        backgroundColor: 'rgba(120, 53, 15, 0.1)',
                         borderWidth: 2,
                         pointBackgroundColor: '#ffffff',
-                        pointBorderColor: '#C15C3D',
+                        pointBorderColor: '#78350f',
                         pointBorderWidth: 2,
                         pointRadius: 4,
                         fill: true,
@@ -42,6 +41,12 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            // Tooltip Oscuro Premium
+                            backgroundColor: '#111827',
+                            titleFont: { family: 'Inter', size: 13 },
+                            bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
+                            padding: 12,
+                            cornerRadius: 8,
                             callbacks: {
                                 label: function(context) {
                                     let value = context.raw;
@@ -55,13 +60,15 @@
                     },
                     scales: {
                         x: {
-                            grid: { display: false }
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 12 } }
                         },
                         y: {
                             beginAtZero: true,
                             border: { display: false },
                             grid: { color: '#f3f4f6' },
                             ticks: {
+                                font: { family: 'Inter', size: 12 },
                                 callback: function(value) {
                                     if (useCurrency) {
                                         return '$' + value.toLocaleString('en-US');
