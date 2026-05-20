@@ -12,6 +12,8 @@ use App\Observers\QuotationMessageObserver;
 // ¡Nuevas importaciones necesarias!
 use App\Models\Order;
 use App\Observers\OrderObserver;
+use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Notifications\Messages\MailMessage;
 
 class AppServiceProvider extends ServiceProvider
 { 
@@ -39,6 +41,15 @@ class AppServiceProvider extends ServiceProvider
         // Registro de Observers
         QuotationMessage::observe(QuotationMessageObserver::class);
         Order::observe(OrderObserver::class); 
+
+        VerifyEmail::toMailUsing(function (object $notifiable, string $url) {
+            return (new MailMessage)
+                ->subject('Verifica tu correo electrónico - Carpintec')
+                ->view('emails.verify_email', [
+                    'url' => $url,
+                    'user' => $notifiable // Pasamos el usuario para personalizar el saludo
+                ]);
+        });
     }
 
     public function hasRole($roles): bool

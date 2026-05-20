@@ -3,19 +3,18 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\RegisterRequest; // Importamos el escudo
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\Subscriber;
 use App\Models\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Validation\Rules;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -25,16 +24,9 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-    public function store(Request $request): RedirectResponse
+    // Inyectamos el RegisterRequest aquí
+    public function store(RegisterRequest $request): RedirectResponse
     {
-        $request->validate([
-            'first_name'        => ['required', 'string', 'max:255'],
-            'last_name'         => ['required', 'string', 'max:255'],
-            'email'             => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password'          => ['required', 'confirmed', Rules\Password::defaults()],
-            'accepts_marketing' => ['nullable', 'boolean'],
-        ]);
-
         try {
             $user = DB::transaction(function () use ($request) {
                 
@@ -45,13 +37,11 @@ class RegisteredUserController extends Controller
                     'password'   => Hash::make($request->password),
                 ]);
 
-                // CORRECCIÓN: Volvemos a tu método original de Eloquent
-                // para evitar el requerimiento de 'guard_name' de Spatie
                 $role = Role::where('name', 'customer')->first();
                 if ($role) {
                     $newUser->roles()->attach($role->id);
                 } else {
-                    Log::warning('Carpintec Auth - El rol "customer" no existe en la BD. El usuario ID: ' . $newUser->id . ' se creó sin rol.');
+                    Log::warning('Carpintec Auth - El rol "customer" no existe. El usuario ID: ' . $newUser->id . ' se creó sin rol.');
                 }
 
                 $acceptsMarketing = $request->boolean('accepts_marketing');
@@ -72,14 +62,10 @@ class RegisteredUserController extends Controller
                 return $newUser;
             });
 
+            // Envío de correo en HTML de Alta Gama
             if ($request->boolean('accepts_marketing')) {
                 try {
-                    $body = "¡Hola {$user->first_name}!\n\n"
-                          . "Gracias por suscribirte al newsletter oficial de Carpintec.\n"
-                          . "A partir de ahora, serás de los primeros en conocer nuestras nuevas colecciones, promociones exclusivas y el trabajo artesanal de nuestro taller.\n\n"
-                          . "Saludos,\nEl equipo de Carpintec.";
-
-                    Mail::raw($body, function ($message) use ($user) {
+                    Mail::send('emails.subscriber_welcome', ['user' => $user], function ($message) use ($user) {
                         $message->to($user->email)
                                 ->subject('¡Bienvenido al Newsletter de Carpintec!');
                     });

@@ -8,50 +8,52 @@ class AddressRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // La autorización de propiedad la seguimos manejando en el controlador
-        return true;
+        return true; 
     }
 
-    protected function prepareForValidation(): void
+    protected function prepareForValidation()
     {
-        // 1. Sanitización de Datos (Previene XSS limpiando etiquetas HTML/Scripts)
-        // 2. Fusión de campos: Si la API falló, tomamos la colonia del input manual
-        $neighborhood = $this->neighborhood ?: $this->neighborhood_manual;
-
+        // Sanitización extrema: quitamos espacios extra y bloqueamos inyección de scripts HTML
         $this->merge([
-            'alias'           => strip_tags($this->alias),
-            'street'          => strip_tags($this->street),
-            'exterior_number' => strip_tags($this->exterior_number),
-            'interior_number' => strip_tags($this->interior_number),
-            'neighborhood'    => strip_tags($neighborhood),
-            'city'            => strip_tags($this->city),
-            'state'           => strip_tags($this->state),
+            'postal_code'     => preg_replace('/[^0-9]/', '', $this->postal_code),
+            'contact_phone'   => preg_replace('/[^0-9]/', '', $this->contact_phone),
+            'state'           => strip_tags(trim($this->state)),
+            'city'            => strip_tags(trim($this->city)),
+            'neighborhood'    => strip_tags(trim($this->neighborhood)),
+            'street'          => strip_tags(trim($this->street)),
+            'exterior_number' => strip_tags(trim($this->exterior_number)),
+            'interior_number' => strip_tags(trim($this->interior_number)),
+            'alias'           => strip_tags(trim($this->alias)),
         ]);
     }
 
     public function rules(): array
     {
         return [
-            'alias'           => ['nullable', 'string', 'max:100'],
-            'street'          => ['required', 'string', 'max:255'],
-            'exterior_number' => ['required', 'string', 'max:20'],
-            'interior_number' => ['nullable', 'string', 'max:20'],
-            'neighborhood'    => ['required', 'string', 'max:255'],
-            'city'            => ['required', 'string', 'max:255'],
+            // Usamos 'digits' que obliga a que sean numéricos y exactamente de esa longitud
+            'postal_code'     => ['required', 'digits:5'],
             'state'           => ['required', 'string', 'max:255'],
-            // Regex: Exactamente 5 dígitos numéricos
-            'postal_code'     => ['required', 'string', 'regex:/^[0-9]{5}$/'],
-            // Regex: Entre 10 y 15 dígitos numéricos
-            'contact_phone'   => ['nullable', 'string', 'regex:/^[0-9]{10,15}$/'],
-            'is_primary'      => ['nullable', 'boolean'],
+            'city'            => ['required', 'string', 'max:255'],
+            'neighborhood'    => ['required', 'string', 'max:255'],
+            'street'          => ['required', 'string', 'max:255'],
+            // Ampliamos a 20 para permitir formatos como "Mza 12 Lote 34" o "Km 11.5"
+            'exterior_number' => ['required', 'string', 'max:20'], 
+            'interior_number' => ['nullable', 'string', 'max:20'],
+            'alias'           => ['nullable', 'string', 'max:100'],
+            'contact_phone'   => ['nullable', 'digits:10'],
+            'is_primary'      => ['boolean'],
         ];
     }
 
     public function messages(): array
     {
         return [
-            'postal_code.regex'   => 'El código postal debe contener exactamente 5 dígitos.',
-            'contact_phone.regex' => 'El teléfono de contacto debe contener entre 10 y 15 números válidos.',
+            // Mapeamos directamente el error de la regla 'digits'
+            'postal_code.digits'    => 'El código postal debe tener exactamente 5 números.',
+            'contact_phone.digits'  => 'El teléfono debe tener exactamente 10 números.',
+            'neighborhood.required' => 'Es necesario indicar la colonia o asentamiento.',
+            'exterior_number.max'   => 'El número exterior ingresado es demasiado largo.',
+            'interior_number.max'   => 'El número interior ingresado es demasiado largo.',
         ];
     }
 }

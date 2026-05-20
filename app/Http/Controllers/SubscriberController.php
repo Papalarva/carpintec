@@ -53,16 +53,11 @@ class SubscriberController extends Controller
                 );
             });
 
-            // LA MAGIA DEL CORREO: Solo lo enviamos si es un suscriptor completamente nuevo
             if ($subscriber->wasRecentlyCreated) {
-                $body = "¡Hola!\n\n"
-                      . "Gracias por suscribirte al newsletter oficial de Carpintec.\n"
-                      . "A partir de ahora, serás de los primeros en conocer nuestras nuevas colecciones, promociones exclusivas y el trabajo artesanal de nuestro taller.\n\n"
-                      . "Saludos,\nEl equipo de Carpintec.";
-
-                Mail::raw($body, function ($message) use ($subscriber) {
+                
+                Mail::send('emails.subscriber_welcome', ['subscriber' => $subscriber], function ($message) use ($subscriber) {
                     $message->to($subscriber->email)
-                            ->subject('¡Bienvenido al Newsletter de Carpintec!');
+                            ->subject('¡Bienvenido a Carpintec! Tu taller de confianza.');
                 });
             }
 
