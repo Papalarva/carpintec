@@ -11,7 +11,7 @@
                     </p>
                 </div>
 
-                <form x-ref="form" method="POST" action="{{ route('register') }}" class="space-y-6" @submit="attemptSubmit($event)">
+                <form x-ref="form" method="POST" action="{{ route('register') }}" class="space-y-6" @submit.prevent="attemptSubmit($event)">
                     @csrf
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
@@ -61,7 +61,7 @@
                         @error('email') <p class="text-[11px] font-bold tracking-wide text-rose-600 mt-2">{{ $message }}</p> @enderror
                     </div>
 
-                    {{-- Contraseña --}}
+                    {{-- Contraseña con Medidor Visual --}}
                     <div>
                         <label for="password" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Contraseña</label>
                         <div class="relative group">
@@ -71,6 +71,7 @@
                                 </svg>
                             </div>
                             <input id="password" x-bind:type="showPass ? 'text' : 'password'" name="password" required placeholder="••••••••" minlength="8"
+                                   x-model="password" @input="checkStrength(); checkPasswordMatch();"
                                    class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm">
                             
                             <button type="button" @click="showPass = !showPass" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none" tabindex="-1">
@@ -81,6 +82,34 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
                                 </svg>
                             </button>
+                        </div>
+
+                        {{-- Indicadores visuales de fuerza --}}
+                        <div class="mt-3 space-y-2">
+                            <div class="flex gap-1 h-1.5">
+                                <div class="h-full flex-1 rounded-full transition-colors duration-300" :class="score >= 1 ? (score === 1 ? 'bg-rose-500' : (score === 2 ? 'bg-amber-500' : 'bg-emerald-500')) : 'bg-gray-200'"></div>
+                                <div class="h-full flex-1 rounded-full transition-colors duration-300" :class="score >= 2 ? (score === 2 ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-gray-200'"></div>
+                                <div class="h-full flex-1 rounded-full transition-colors duration-300" :class="score >= 3 ? (score === 3 ? 'bg-lime-500' : 'bg-emerald-500') : 'bg-gray-200'"></div>
+                                <div class="h-full flex-1 rounded-full transition-colors duration-300" :class="score >= 4 ? 'bg-emerald-500' : 'bg-gray-200'"></div>
+                            </div>
+                            <ul class="text-[10px] text-gray-500 grid grid-cols-2 gap-1 font-sans">
+                                <li class="flex items-center gap-1 transition-colors" :class="reqs.length ? 'text-emerald-600 font-bold' : ''">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" x-show="reqs.length"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" x-show="!reqs.length"/></svg>
+                                    8+ caracteres
+                                </li>
+                                <li class="flex items-center gap-1 transition-colors" :class="reqs.upper ? 'text-emerald-600 font-bold' : ''">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" x-show="reqs.upper"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" x-show="!reqs.upper"/></svg>
+                                    Mayúscula
+                                </li>
+                                <li class="flex items-center gap-1 transition-colors" :class="reqs.number ? 'text-emerald-600 font-bold' : ''">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" x-show="reqs.number"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" x-show="!reqs.number"/></svg>
+                                    Número
+                                </li>
+                                <li class="flex items-center gap-1 transition-colors" :class="reqs.symbol ? 'text-emerald-600 font-bold' : ''">
+                                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" x-show="reqs.symbol"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" x-show="!reqs.symbol"/></svg>
+                                    Símbolo especial
+                                </li>
+                            </ul>
                         </div>
                         @error('password') <p class="text-[11px] font-bold tracking-wide text-rose-600 mt-2">{{ $message }}</p> @enderror
                     </div>
@@ -95,8 +124,8 @@
                                 </svg>
                             </div>
                             <input id="password_confirmation" x-bind:type="showConf ? 'text' : 'password'" name="password_confirmation" required placeholder="••••••••" minlength="8"
-                                   class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm"
-                                   @input="checkPasswordMatch()">
+                                   x-model="confirmation" @input="checkPasswordMatch()"
+                                   class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm">
                             
                             <button type="button" @click="showConf = !showConf" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none" tabindex="-1">
                                 <svg x-show="!showConf" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -121,14 +150,17 @@
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" :disabled="isSubmitting"
-                                class="w-full inline-flex justify-center items-center bg-amber-900 text-white hover:bg-amber-800 uppercase tracking-widest text-xs font-bold rounded-xl px-8 py-4 transition-all shadow-md focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed">
+                        <button type="submit" :disabled="isSubmitting || score < 4"
+                                class="w-full inline-flex justify-center items-center bg-amber-900 text-white hover:bg-amber-800 uppercase tracking-widest text-xs font-bold rounded-xl px-8 py-4 transition-all shadow-md focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed">
                             <span x-show="!isSubmitting">Completar Registro</span>
                             <span x-show="isSubmitting" x-cloak class="flex items-center">
                                 <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                 Creando cuenta...
                             </span>
                         </button>
+                        <p x-show="score < 4 && password.length > 0" x-cloak class="text-center text-[10px] text-rose-500 font-bold mt-2 uppercase tracking-widest">
+                            La contraseña debe cumplir todos los requisitos
+                        </p>
                     </div>
                 </form>
 
@@ -157,18 +189,36 @@
         
     </div>
 
-    {{-- CEREBRO DE ALPINE PARA REGISTRO --}}
     <script>
         function registerForm() {
             return {
                 isSubmitting: false,
                 showPass: false,
                 showConf: false,
+                password: '',
+                confirmation: '',
+                reqs: {
+                    length: false,
+                    upper: false,
+                    number: false,
+                    symbol: false
+                },
+
+                get score() {
+                    return Object.values(this.reqs).filter(Boolean).length;
+                },
 
                 init() {
                     this.$nextTick(() => {
                         this.setupValidators(this.$refs.form);
                     });
+                },
+
+                checkStrength() {
+                    this.reqs.length = this.password.length >= 8;
+                    this.reqs.upper = /[A-Z]/.test(this.password);
+                    this.reqs.number = /[0-9]/.test(this.password);
+                    this.reqs.symbol = /[^A-Za-z0-9]/.test(this.password);
                 },
 
                 setupValidators(form) {
@@ -188,35 +238,26 @@
                                 }
                             }
                         };
-                        el.oninput = e => {
-                            e.target.setCustomValidity('');
-                        };
+                        el.oninput = e => { e.target.setCustomValidity(''); };
                     });
                 },
 
-                // Verifica la contraseña mientras escribe
                 checkPasswordMatch() {
-                    const form = this.$refs.form;
-                    const pass = form.querySelector('#password').value;
-                    const conf = form.querySelector('#password_confirmation');
-                    
-                    if (conf.value !== '' && pass !== conf.value) {
-                        conf.setCustomValidity('Las contraseñas no coinciden.');
+                    const confInput = this.$refs.form.querySelector('#password_confirmation');
+                    if (this.confirmation !== '' && this.password !== this.confirmation) {
+                        confInput.setCustomValidity('Las contraseñas no coinciden.');
                     } else {
-                        conf.setCustomValidity('');
+                        confInput.setCustomValidity('');
                     }
                 },
 
                 attemptSubmit(event) {
                     const form = this.$refs.form;
-                    
-                    // Doble validación antes del envío
                     this.checkPasswordMatch();
 
-                    if(form.checkValidity()) {
+                    if(form.checkValidity() && this.score === 4) {
                         this.isSubmitting = true;
-                    } else {
-                        event.preventDefault(); // Detiene el envío si algo falla
+                        form.submit();
                     }
                 }
             }

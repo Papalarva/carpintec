@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Auth\RegisterRequest; // Importamos el escudo
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use App\Models\Customer;
 use App\Models\Subscriber;
-use App\Models\Role;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
+use App\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -24,7 +24,6 @@ class RegisteredUserController extends Controller
         return view('auth.register');
     }
 
-    // Inyectamos el RegisterRequest aquí
     public function store(RegisterRequest $request): RedirectResponse
     {
         try {
@@ -37,6 +36,8 @@ class RegisteredUserController extends Controller
                     'password'   => Hash::make($request->password),
                 ]);
 
+                // CORRECCIÓN: Volvemos a tu lógica original con Eloquent 
+                // ya que tu tabla roles no usa el estándar de Spatie (sin guard_name)
                 $role = Role::where('name', 'customer')->first();
                 if ($role) {
                     $newUser->roles()->attach($role->id);
@@ -62,7 +63,6 @@ class RegisteredUserController extends Controller
                 return $newUser;
             });
 
-            // Envío de correo en HTML de Alta Gama
             if ($request->boolean('accepts_marketing')) {
                 try {
                     Mail::send('emails.subscriber_welcome', ['user' => $user], function ($message) use ($user) {
