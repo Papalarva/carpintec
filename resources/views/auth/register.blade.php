@@ -2,7 +2,7 @@
     <div class="min-h-screen flex w-full overflow-hidden bg-white">
         
         <div class="w-full lg:w-1/2 flex items-center justify-center bg-gray-50 px-6 py-12 sm:px-12 lg:px-20 overflow-y-auto">
-            <div class="w-full max-w-md my-auto" x-data="{ isSubmitting: false }">
+            <div class="w-full max-w-md my-auto" x-data="registerForm()">
                 
                 <div class="mb-10 text-center lg:text-left">
                     <h2 class="font-serif text-4xl text-gray-900 tracking-tight mb-3">Crear Cuenta</h2>
@@ -11,7 +11,7 @@
                     </p>
                 </div>
 
-                <form method="POST" action="{{ route('register') }}" class="space-y-6" @submit="if($el.checkValidity()) { isSubmitting = true; }">
+                <form x-ref="form" method="POST" action="{{ route('register') }}" class="space-y-6" @submit="attemptSubmit($event)">
                     @csrf
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6">
@@ -62,7 +62,7 @@
                     </div>
 
                     {{-- Contraseña --}}
-                    <div x-data="{ showPass: false }">
+                    <div>
                         <label for="password" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Contraseña</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-amber-900 transition-colors">
@@ -73,7 +73,7 @@
                             <input id="password" x-bind:type="showPass ? 'text' : 'password'" name="password" required placeholder="••••••••" minlength="8"
                                    class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm">
                             
-                            <button type="button" @click="showPass = !showPass" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none">
+                            <button type="button" @click="showPass = !showPass" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none" tabindex="-1">
                                 <svg x-show="!showPass" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
@@ -86,7 +86,7 @@
                     </div>
 
                     {{-- Confirmar Contraseña --}}
-                    <div x-data="{ showConf: false }">
+                    <div>
                         <label for="password_confirmation" class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5">Confirmar Contraseña</label>
                         <div class="relative group">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-amber-900 transition-colors">
@@ -95,9 +95,10 @@
                                 </svg>
                             </div>
                             <input id="password_confirmation" x-bind:type="showConf ? 'text' : 'password'" name="password_confirmation" required placeholder="••••••••" minlength="8"
-                                   class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm">
+                                   class="block w-full pl-11 pr-12 rounded-xl border-gray-200 bg-gray-50/50 py-3.5 focus:bg-white focus:border-amber-900 focus:ring-amber-900 shadow-sm transition-all font-sans text-sm"
+                                   @input="checkPasswordMatch()">
                             
-                            <button type="button" @click="showConf = !showConf" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none">
+                            <button type="button" @click="showConf = !showConf" class="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-amber-900 transition-colors focus:outline-none" tabindex="-1">
                                 <svg x-show="!showConf" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
@@ -155,4 +156,70 @@
         </div>
         
     </div>
+
+    {{-- CEREBRO DE ALPINE PARA REGISTRO --}}
+    <script>
+        function registerForm() {
+            return {
+                isSubmitting: false,
+                showPass: false,
+                showConf: false,
+
+                init() {
+                    this.$nextTick(() => {
+                        this.setupValidators(this.$refs.form);
+                    });
+                },
+
+                setupValidators(form) {
+                    if (!form) return;
+                    form.querySelectorAll('input').forEach(el => {
+                        el.oninvalid = e => {
+                            e.target.setCustomValidity('');
+                            if (!e.target.validity.valid) {
+                                if (e.target.validity.valueMissing) {
+                                    e.target.setCustomValidity('Este campo es obligatorio.');
+                                } else if (e.target.validity.typeMismatch) {
+                                    e.target.setCustomValidity('El formato no es válido.');
+                                } else if (e.target.validity.tooShort) {
+                                    e.target.setCustomValidity(`Debe tener al menos ${e.target.minLength} caracteres.`);
+                                } else {
+                                    e.target.setCustomValidity('Valor inválido.');
+                                }
+                            }
+                        };
+                        el.oninput = e => {
+                            e.target.setCustomValidity('');
+                        };
+                    });
+                },
+
+                // Verifica la contraseña mientras escribe
+                checkPasswordMatch() {
+                    const form = this.$refs.form;
+                    const pass = form.querySelector('#password').value;
+                    const conf = form.querySelector('#password_confirmation');
+                    
+                    if (conf.value !== '' && pass !== conf.value) {
+                        conf.setCustomValidity('Las contraseñas no coinciden.');
+                    } else {
+                        conf.setCustomValidity('');
+                    }
+                },
+
+                attemptSubmit(event) {
+                    const form = this.$refs.form;
+                    
+                    // Doble validación antes del envío
+                    this.checkPasswordMatch();
+
+                    if(form.checkValidity()) {
+                        this.isSubmitting = true;
+                    } else {
+                        event.preventDefault(); // Detiene el envío si algo falla
+                    }
+                }
+            }
+        }
+    </script>
 </x-guest-layout>

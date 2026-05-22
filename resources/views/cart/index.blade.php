@@ -1,17 +1,18 @@
 <x-app-layout>
     <x-slot:title>Tu Carrito - Carpintec</x-slot:title>
 
-    <!-- Fondo limpio, centrado estrecho (max-w-3xl) para máximo enfoque -->
     <div class="bg-gray-50/30 min-h-screen pt-12 pb-24">
-        <!-- Modificamos cartPage para que controle también el modal -->
-        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8" x-data="cartPage({{ $subtotal ?? 0 }}, {{ $items->sum('quantity') ?? 0 }})">
+        
+        <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8" 
+             x-data="cartPage({{ $subtotal ?? 0 }}, {{ $items->sum('quantity') ?? 0 }})"
+             @cart-error.window="showGlobalError($event.detail)"
+             @trigger-delete-modal.window="openModal($event.detail.form, $event.detail.name)">
 
             <div class="text-center mb-12">
                 <h1 class="text-4xl font-serif font-bold text-gray-900 tracking-tight mb-2">Tu Carrito</h1>
                 <p class="text-xs text-gray-500 font-sans uppercase tracking-widest font-bold">Revisa tu selección antes de finalizar</p>
             </div>
 
-            <!-- Lista sin cajas pesadas, solo líneas divisorias súper finas -->
             <div class="border-t border-b border-gray-200">
                 <ul class="divide-y divide-gray-200" role="list">
                     @forelse($items as $item)
@@ -38,7 +39,6 @@
 
                             <div class="mt-6 sm:mt-0 sm:ml-8 flex-1 flex flex-col sm:flex-row sm:justify-between sm:items-center">
                                 
-                                <!-- Información del Producto -->
                                 <div class="flex-1 mb-6 sm:mb-0">
                                     <div class="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-1">
                                         {{ $product->category->name ?? 'Colección' }}
@@ -52,22 +52,21 @@
                                     <p class="text-xs font-sans text-gray-400 uppercase tracking-widest font-medium">SKU: {{ $product->sku }}</p>
                                 </div>
 
-                                <!-- Controles y Precio -->
                                 <div class="flex items-center justify-between sm:justify-end sm:space-x-8 w-full sm:w-auto">
                                     
                                     <div class="flex items-center border border-gray-200 rounded-lg bg-white shadow-sm">
-                                        <button @click="decrement()" aria-label="Disminuir cantidad"
+                                        <button @click="decrement($refs.deleteForm, '{{ addslashes($product->name) }}')" aria-label="Disminuir cantidad"
                                             class="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-amber-800 rounded-l-lg focus:ring-2 focus:ring-amber-800 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            :disabled="qty <= 1 || loading">
+                                            :disabled="loading">
                                             <span class="text-lg leading-none">−</span>
                                         </button>
 
                                         <input type="number" 
                                                x-model.number="qty" 
-                                               min="1" 
+                                               min="0" 
                                                :max="maxStock"
                                                class="w-12 h-10 text-center border-0 border-x border-gray-200 p-0 text-sm font-bold font-sans text-gray-900 focus:ring-0 focus:border-amber-800"
-                                               @change="handleManualInput()"
+                                               @change="handleManualInput($refs.deleteForm, '{{ addslashes($product->name) }}')"
                                                :disabled="loading">
                                         
                                         <button @click="increment()" 
@@ -82,13 +81,11 @@
                                             <p class="text-xl font-sans font-medium text-gray-900" x-text="formatMoney(localSubtotal)"></p>
                                         </div>
 
-                                        <!-- Formulario de eliminación modificado -->
                                         <form x-ref="deleteForm" action="{{ route('cart.remove', $product->slug) }}" method="POST" class="inline">
                                             @csrf
                                             @method('DELETE')
-                                            <!-- Cambiamos type="submit" por type="button" y llamamos al modal del padre -->
                                             <button type="button" aria-label="Eliminar {{ $product->name }}"
-                                                class="text-gray-300 hover:text-red-700 transition-colors focus:outline-none"
+                                                class="text-gray-300 hover:text-rose-700 transition-colors focus:outline-none"
                                                 @click="openModal($refs.deleteForm, '{{ addslashes($product->name) }}')">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -99,7 +96,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <p x-show="errorMessage" x-cloak x-text="errorMessage" class="text-red-600 text-xs font-bold mt-2 w-full sm:text-right"></p>
                         </li>
                     @empty
                         <div class="text-center py-24 bg-transparent">
@@ -117,9 +113,31 @@
                 </ul>
             </div>
 
-            <!-- Resumen de Compra -->
+            <div x-show="globalErrorMessage" x-cloak
+                 x-transition:enter="transition ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-2"
+                 x-transition:enter-end="opacity-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0"
+                 x-transition:leave-end="opacity-0 translate-y-2"
+                 class="mt-6 bg-rose-50 border border-rose-100 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                
+                <div class="flex items-center gap-3">
+                    <svg class="h-5 w-5 text-rose-600" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <span class="text-xs font-bold text-rose-800 uppercase tracking-widest" x-text="globalErrorMessage"></span>
+                </div>
+                
+                <button @click="globalErrorMessage = ''" class="text-rose-400 hover:text-rose-600 transition-colors focus:outline-none">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
             @if ($items->isNotEmpty())
-                <div class="mt-12 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
+                <div class="mt-8 bg-white rounded-2xl p-8 border border-gray-100 shadow-sm">
                     <div class="flex items-end justify-between mb-6">
                         <div>
                             <p class="text-sm font-bold uppercase tracking-widest text-gray-500">Subtotal <span class="text-gray-400 font-normal lowercase">(<span x-text="totalItems"></span> piezas)</span></p>
@@ -144,9 +162,7 @@
                 </div>
             @endif
 
-            <!-- MODAL DE CONFIRMACIÓN -->
             <div x-show="isModalOpen" x-cloak class="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-                <!-- Fondo desenfocado -->
                 <div x-show="isModalOpen"
                      x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
                      x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
@@ -154,7 +170,6 @@
 
                 <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
                     <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                        <!-- Panel del Modal -->
                         <div x-show="isModalOpen" @click.away="closeModal()"
                              x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
                              x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -189,12 +204,9 @@
                     </div>
                 </div>
             </div>
-            <!-- FIN DEL MODAL -->
-
         </div>
     </div>
 
-    <!-- Script de Alpine.js Actualizado -->
     <script>
         const formatMoney = (amount) => {
             return new Intl.NumberFormat('es-MX', {
@@ -208,23 +220,35 @@
                 cartSubtotal: initialSubtotal,
                 totalItems: initialItems,
                 
-                // Variables para el Modal
                 isModalOpen: false,
                 itemToRemoveName: '',
                 formToSubmit: null,
+
+                globalErrorMessage: '',
+                errorTimeout: null,
+
+                showGlobalError(msg) {
+                    this.globalErrorMessage = msg;
+                    clearTimeout(this.errorTimeout);
+                    this.errorTimeout = setTimeout(() => {
+                        this.globalErrorMessage = '';
+                    }, 4000);
+                },
 
                 openModal(formElement, itemName) {
                     this.formToSubmit = formElement;
                     this.itemToRemoveName = itemName;
                     this.isModalOpen = true;
+                    document.body.classList.add('overflow-hidden');
                 },
 
                 closeModal() {
                     this.isModalOpen = false;
+                    document.body.classList.remove('overflow-hidden');
                     setTimeout(() => {
                         this.formToSubmit = null;
                         this.itemToRemoveName = '';
-                    }, 300); // Esperamos a que termine la animación
+                    }, 300);
                 },
 
                 confirmDelete() {
@@ -244,18 +268,23 @@
                 localSubtotal: initialQty * unitPrice,
                 loading: false,
                 timeout: null,
-                errorMessage: '',
 
                 updateLocalSubtotal() {
                     this.localSubtotal = this.qty * this.unitPrice;
                 },
 
-                handleManualInput() {
-                    if (this.qty < 1) this.qty = 1;
+                handleManualInput(deleteForm, itemName) {
+                    // Si el usuario introduce 0 o borra el campo, disparamos el modal
+                    if (this.qty === '' || this.qty <= 0) {
+                        this.qty = this.previousQty; // Restauramos el valor previo por seguridad
+                        this.updateLocalSubtotal();
+                        this.$dispatch('trigger-delete-modal', { form: deleteForm, name: itemName });
+                        return;
+                    }
+
                     if (this.qty > this.maxStock) {
                         this.qty = this.maxStock;
-                        this.errorMessage = `Límite de ${this.maxStock} unidades.`;
-                        setTimeout(() => { this.errorMessage = ''; }, 3000);
+                        this.$dispatch('cart-error', `Límite alcanzado: Solo contamos con ${this.maxStock} unidades en inventario.`);
                     }
                     this.updateLocalSubtotal();
                     this.scheduleUpdate();
@@ -271,7 +300,6 @@
                 async updateCart() {
                     if (this.qty === this.previousQty) return;
                     this.loading = true;
-                    this.errorMessage = '';
 
                     try {
                         const resp = await fetch(`/carrito/${slug}`, {
@@ -299,10 +327,9 @@
                             this.$data.totalItems = parseInt(data.totalItems);
                         }
                     } catch (e) {
-                        this.errorMessage = e.message;
+                        this.$dispatch('cart-error', e.message);
                         this.qty = this.previousQty;
                         this.updateLocalSubtotal();
-                        setTimeout(() => { this.errorMessage = ''; }, 4000);
                     } finally {
                         this.loading = false;
                     }
@@ -314,19 +341,23 @@
                         this.updateLocalSubtotal();
                         this.scheduleUpdate();
                     } else {
-                        this.errorMessage = `Límite de ${this.maxStock} unidades.`;
-                        setTimeout(() => { this.errorMessage = ''; }, 3000);
+                        this.$dispatch('cart-error', `Límite alcanzado: Solo contamos con ${this.maxStock} unidades en inventario.`);
                     }
                 },
 
-                decrement() {
+                decrement(deleteForm, itemName) {
+                    // Si está en 1 y pulsa menos, lanzamos el modal en lugar de bloquear el botón
+                    if (this.qty === 1) {
+                        this.$dispatch('trigger-delete-modal', { form: deleteForm, name: itemName });
+                        return;
+                    }
+
                     if (this.qty > 1) {
                         this.qty--;
                         this.updateLocalSubtotal();
                         this.scheduleUpdate();
                     }
                 }
-                
             }
         }
     </script>

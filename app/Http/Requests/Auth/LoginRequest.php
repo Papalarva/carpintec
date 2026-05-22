@@ -42,15 +42,29 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        // 1. Buscamos al usuario INCLUYENDO los deshabilitados (Soft Deletes)
+        $user = \App\Models\User::withTrashed()->where('email', $this->input('email'))->first();
 
-            throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+        // 🛡️ FASE DE SEGURIDAD: Detectar cuenta deshabilitada/eliminada
+        if ($user && $user->trashed()) {
+            \Illuminate\Support\Facades\RateLimiter::hit($this->throttleKey());
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'El acceso a esta cuenta ha sido restringido o deshabilitado por un administrador.',
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        // 2. Intentar el inicio de sesión nativo con las credenciales
+        if (! \Illuminate\Support\Facades\Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+            \Illuminate\Support\Facades\RateLimiter::hit($this->throttleKey());
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                // 📝 Forzamos el mensaje explícito en español aquí, anulando el inglés por defecto
+                'email' => 'Estas credenciales no coinciden con nuestros registros.',
+            ]);
+        }
+
+        \Illuminate\Support\Facades\RateLimiter::clear($this->throttleKey());
     }
 
     /**
@@ -60,19 +74,22 @@ class LoginRequest extends FormRequest
      */
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        if (! \Illuminate\Support\Facades\RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
             return;
         }
 
-        event(new Lockout($this));
+        event(new \Illuminate\Auth\Events\Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($this->throttleKey());
+        $minutes = ceil($seconds / 60);
 
-        throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+        // 🛡️ FASE DE SEGURIDAD: Personalizamos el mensaje de bloqueo temporal
+        $mensaje = $seconds < 60 
+            ? "Demasiados intentos de acceso. Por favor, inténtalo de nuevo en {$seconds} segundos."
+            : "Demasiados intentos de acceso. Por favor, inténtalo de nuevo en {$minutes} minuto(s).";
+
+        throw \Illuminate\Validation\ValidationException::withMessages([
+            'email' => $mensaje,
         ]);
     }
 
@@ -81,6 +98,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->string('email')) . '|' . $this->ip());
     }
 }
