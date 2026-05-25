@@ -6,6 +6,8 @@ use App\Enums\QuotationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Quotation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class QuotationController extends Controller
@@ -52,6 +54,8 @@ class QuotationController extends Controller
 
     public function updateStatus(Request $request, Quotation $quotation)
     {
+        $previousStatus = $quotation->status;
+
         $validated = $request->validate([
             'status'          => ['required', Rule::enum(QuotationStatus::class)],
             'estimated_price' => 'nullable|numeric|min:0',
@@ -68,6 +72,27 @@ class QuotationController extends Controller
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
                 $quotation->addMedia($file)->toMediaCollection('admin_quotation_files', 'public');
+            }
+        }
+
+        if ($quotation->status !== $previousStatus) {
+            $quotation->loadMissing(['customer.user', 'product']);
+
+            $customerEmail = $quotation->customer?->user?->email;
+
+            if ($customerEmail) {
+                try {
+                    Mail::send('emails.quotations.status-changed', ['quotation' => $quotation], function ($message) use ($customerEmail, $quotation) {
+                        $message->to($customerEmail)
+                            ->subject('Actualización de tu cotización: ' . $quotation->subject);
+                    });
+                } catch (\Throwable $e) {
+                    Log::error('No se pudo enviar el correo de actualización de cotización.', [
+                        'quotation_id' => $quotation->id,
+                        'customer_email' => $customerEmail,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
         }
 
