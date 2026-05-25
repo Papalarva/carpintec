@@ -1,5 +1,21 @@
 @csrf
 
+@php
+    $serverImages = isset($product) && $product && $product->exists
+        ? $product->getMedia('product_images')
+            ->sortBy('order_column')
+            ->values()
+            ->map(function ($img) use ($product) {
+                return [
+                    'id' => $img->id,
+                    'name' => $img->file_name,
+                    'url' => $product->mediaUrl($img) ?? asset('images/product-placeholder.svg'),
+                ];
+            })
+            ->all()
+        : [];
+@endphp
+
 {{-- SECCIÓN 1: INFORMACIÓN BÁSICA --}}
 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-8">
     <h3 class="text-xl font-bold text-gray-900 mb-6 font-serif border-b border-gray-100 pb-4">Información Básica</h3>
@@ -12,7 +28,7 @@
                 Interno) <span class="text-rose-500">*</span></label>
             <input type="text" name="sku" id="sku" value="{{ old('sku', $product->sku ?? '') }}" required
                 maxlength="50"
-                class="block w-full scroll-mt-32 rounded-xl border-gray-200 bg-gray-50/50 text-sm py-3.5 focus:bg-white focus:ring-amber-900 focus:border-amber-900 transition-colors shadow-sm font-sans font-mono uppercase"
+                class="block w-full scroll-mt-32 rounded-xl border-gray-200 bg-gray-50/50 text-sm py-3.5 focus:bg-white focus:ring-amber-900 focus:border-amber-900 transition-colors shadow-sm font-mono uppercase"
                 placeholder="Ej. MES-001">
             @error('sku')
                 <p class="text-rose-600 text-[11px] font-bold tracking-wide mt-2 font-sans">{{ $message }}</p>
@@ -191,7 +207,7 @@
         <span class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 font-sans">Fotografías del Mueble</span>
 
         {{-- Convertimos el div principal en un <label> para que toda el área punteada sea clickeable --}}
-        <label for="images" class="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-200 border-dashed rounded-2xl bg-gray-50/50 hover:bg-amber-50/30 transition-colors relative group cursor-pointer w-full block">
+        <label for="images" class="mt-1 flex justify-center px-6 pt-8 pb-8 border-2 border-gray-200 border-dashed rounded-2xl bg-gray-50/50 hover:bg-amber-50/30 transition-colors relative group cursor-pointer w-full">
             <div class="space-y-2 text-center pointer-events-none">
                 <svg class="mx-auto h-12 w-12 text-gray-300 group-hover:text-amber-800 transition-colors"
                     stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true" stroke-width="1.5">
@@ -201,7 +217,7 @@
                     <span class="relative bg-transparent rounded-md font-bold text-amber-900 group-hover:text-amber-700 transition-colors pointer-events-auto">
                         Sube archivos
                         {{-- Se corrigió el evento @change para que coincida con tu función de Alpine --}}
-                        <input id="images" name="images[]" type="file" multiple
+                        <input id="images" name="images[]" type="file" multiple x-ref="newImagesInput"
                             accept="image/jpeg, image/png, image/webp" class="sr-only" @change="processFiles($event.target.files)">
                     </span>
                     <p class="pl-1">o arrastra y suelta aquí</p>
@@ -222,10 +238,23 @@
         {{-- Grid de Previsualización Dinámica --}}
         <div x-show="imagesPreviews.length > 0" class="mt-6" x-cloak>
             <p class="text-[10px] font-bold text-amber-900 uppercase tracking-widest mb-3 font-sans border-b border-amber-100 pb-2">
-                Nuevas imágenes listas para subir</p>
+                Nuevas imágenes listas para subir <span class="font-medium normal-case tracking-normal text-amber-700">(arrastra para reordenar)</span></p>
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                <template x-for="(image, index) in imagesPreviews" :key="index">
-                    <div class="relative rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-white p-1">
+                <template x-for="(image, index) in imagesPreviews" :key="image.id">
+                    <div draggable="true"
+                        @dragstart="startNewImageDrag(image.id)"
+                        @dragover.prevent
+                        @drop="dropNewImageAt(image.id)"
+                        @dragend="draggedNewImageId = null"
+                        class="relative rounded-xl overflow-hidden shadow-sm border border-gray-100 bg-white p-1 cursor-grab active:cursor-grabbing">
+                        <div class="absolute top-2 left-2 z-20 inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-white/95 px-2 text-[10px] font-bold text-gray-700 shadow-sm">
+                            <span x-text="index + 1"></span>
+                        </div>
+                        <div class="absolute top-2 right-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-gray-500 shadow-sm">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h.008v.008H8.25V6.75Zm7.5 0h.008v.008h-.008V6.75ZM8.25 12h.008v.008H8.25V12Zm7.5 0h.008v.008h-.008V12ZM8.25 17.25h.008v.008H8.25v-.008Zm7.5 0h.008v.008h-.008v-.008Z" />
+                            </svg>
+                        </div>
                         <img :src="image.url" :alt="image.name" class="w-full h-24 object-cover rounded-lg">
                         <p class="mt-1 text-[10px] text-gray-500 font-bold truncate px-1 font-sans"
                             x-text="image.name"></p>
@@ -236,31 +265,58 @@
     </div>
 
     {{-- Imágenes Actuales con Efecto Fantasma --}}
-    @if (isset($product) && $product->getMedia('product_images')->count())
+    @if (!empty($serverImages))
         <div class="mt-8 pt-6 border-t border-gray-50">
             <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 font-sans">Imágenes
-                Actuales <span class="text-gray-400 normal-case tracking-normal font-medium">(Selecciona para eliminar)</span></label>
+                Actuales <span class="text-gray-400 normal-case tracking-normal font-medium">(Arrastra para cambiar el orden)</span></label>
+
+            <div class="mb-4 rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-[11px] font-medium text-amber-900 font-sans">
+                Arrastra una imagen por el asa para reordenarla. Si marcas una imagen para borrar, saldrá del orden final al guardar.
+            </div>
+
+            <div x-show="serverImages.length" class="hidden" aria-hidden="true">
+                <input type="hidden" name="image_order" :value="JSON.stringify(serverImages.filter(image => !image.deleted).map(image => image.id))">
+                <template x-for="image in serverImages.filter(image => image.deleted)" :key="'delete-'+image.id">
+                    <input type="hidden" name="delete_images[]" :value="image.id">
+                </template>
+            </div>
+
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                @foreach ($product->getMedia('product_images') as $img)
-                    <div x-data="{ isDeleted: false }"
-                        class="relative group rounded-xl overflow-hidden shadow-sm border transition-all duration-300"
-                        :class="isDeleted ? 'border-rose-200 bg-rose-50' : 'border-gray-100 bg-white'">
-                        @php
-                            $imageUrl = $product->mediaUrl($img) ?? asset('images/product-placeholder.svg');
-                        @endphp
-                        <img src="{{ $imageUrl }}" class="w-full h-32 object-cover transition-all duration-300"
-                            :class="isDeleted ? 'grayscale opacity-40' : 'group-hover:scale-105'">
+                <template x-for="(image, index) in serverImages" :key="image.id">
+                    <div draggable="true"
+                        @dragstart="startImageDrag(image.id)"
+                        @dragover.prevent
+                        @drop="dropImageAt(image.id)"
+                        @dragend="draggedImageId = null"
+                        class="relative group rounded-xl overflow-hidden shadow-sm border transition-all duration-300 bg-white"
+                        :class="image.deleted ? 'border-rose-200 bg-rose-50' : 'border-gray-100'">
+                        <div class="absolute top-2 left-2 z-20 inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-white/95 px-2 text-[10px] font-bold text-gray-700 shadow-sm">
+                            <span x-text="index + 1"></span>
+                        </div>
+
+                        <button type="button"
+                            class="absolute top-2 right-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/95 text-gray-500 shadow-sm transition-colors hover:text-amber-900 cursor-grab active:cursor-grabbing"
+                            title="Arrastrar para reordenar"
+                            @mousedown="startImageDrag(image.id)"
+                            @mouseup="draggedImageId = null">
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h.008v.008H8.25V6.75Zm7.5 0h.008v.008h-.008V6.75ZM8.25 12h.008v.008H8.25V12Zm7.5 0h.008v.008h-.008V12ZM8.25 17.25h.008v.008H8.25v-.008Zm7.5 0h.008v.008h-.008v-.008Z" />
+                            </svg>
+                        </button>
+
+                        <img :src="image.url" class="w-full h-32 object-cover transition-all duration-300"
+                            :class="image.deleted ? 'grayscale opacity-40' : 'group-hover:scale-105'">
                         <div class="absolute inset-0 bg-rose-900/20 opacity-0 transition-opacity"
-                            :class="isDeleted ? 'opacity-0' : 'group-hover:opacity-100'"></div>
-                        <label
-                            class="absolute top-2 right-2 px-2.5 py-1.5 rounded-lg shadow-sm text-[10px] uppercase tracking-widest font-bold cursor-pointer border flex items-center gap-2 transition-colors"
-                            :class="isDeleted ? 'bg-rose-600 text-white border-rose-600' : 'bg-white/95 backdrop-blur-sm text-rose-700 border-rose-100 hover:bg-rose-50'">
-                            <input type="checkbox" name="delete_images[]" value="{{ $img->id }}"
-                                x-model="isDeleted" class="hidden">
-                            <span x-text="isDeleted ? 'Marcada para borrar' : 'Eliminar'"></span>
-                        </label>
+                            :class="image.deleted ? 'opacity-0' : 'group-hover:opacity-100'"></div>
+
+                        <button type="button"
+                            class="absolute bottom-2 right-2 z-20 px-2.5 py-1.5 rounded-lg shadow-sm text-[10px] uppercase tracking-widest font-bold border flex items-center gap-2 transition-colors"
+                            @click="toggleImageDelete(image.id)"
+                            :class="image.deleted ? 'bg-rose-600 text-white border-rose-600' : 'bg-white/95 backdrop-blur-sm text-rose-700 border-rose-100 hover:bg-rose-50'">
+                            <span x-text="image.deleted ? 'Marcada para borrar' : 'Eliminar'"></span>
+                        </button>
                     </div>
-                @endforeach
+                </template>
             </div>
         </div>
     @endif
@@ -319,7 +375,10 @@
         return {
             price: {{ old('price', $product->price ?? '') ?: 0 }},
             cost: {{ old('cost', $product->cost ?? '') ?: 0 }},
-            hasServerImages: {{ (isset($product) && $product->getMedia('product_images')->count() > 0) ? 'true' : 'false' }},
+            hasServerImages: {{ !empty($serverImages) ? 'true' : 'false' }},
+            serverImages: @js($serverImages),
+            draggedImageId: null,
+            draggedNewImageId: null,
             isSubmitting: false,
             imagesPreviews: [],
             fileError: '',
@@ -350,16 +409,96 @@
             processFiles(files) {
                 this.fileError = '';
                 const maxSize = 5 * 1024 * 1024;
-                for(let i = 0; i < files.length; i++) {
-                    if(files[i].size > maxSize) {
+                const validFiles = Array.from(files).filter(file => {
+                    if (file.size > maxSize) {
                         this.fileError = 'Uno o más archivos superan los 5MB y fueron descartados.';
-                        continue;
+                        return false;
                     }
+                    return true;
+                });
+
+                validFiles.forEach(file => {
                     this.imagesPreviews.push({
-                        name: files[i].name,
-                        url: URL.createObjectURL(files[i])
+                        id: (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`),
+                        file: file,
+                        name: file.name,
+                        url: URL.createObjectURL(file)
                     });
+                });
+
+                this.syncNewImageInput();
+            },
+
+            startNewImageDrag(imageId) {
+                this.draggedNewImageId = imageId;
+            },
+
+            dropNewImageAt(targetId) {
+                if (!this.draggedNewImageId || this.draggedNewImageId === targetId) {
+                    this.draggedNewImageId = null;
+                    return;
                 }
+
+                const fromIndex = this.imagesPreviews.findIndex(image => image.id === this.draggedNewImageId);
+                const toIndex = this.imagesPreviews.findIndex(image => image.id === targetId);
+
+                if (fromIndex === -1 || toIndex === -1) {
+                    this.draggedNewImageId = null;
+                    return;
+                }
+
+                const [movedImage] = this.imagesPreviews.splice(fromIndex, 1);
+                this.imagesPreviews.splice(toIndex, 0, movedImage);
+                this.draggedNewImageId = null;
+                this.syncNewImageInput();
+            },
+
+            syncNewImageInput() {
+                const input = this.$refs.newImagesInput;
+                if (!input) {
+                    return;
+                }
+
+                const dataTransfer = new DataTransfer();
+                this.imagesPreviews.forEach(image => {
+                    dataTransfer.items.add(image.file);
+                });
+
+                input.files = dataTransfer.files;
+            },
+
+            startImageDrag(imageId) {
+                this.draggedImageId = imageId;
+            },
+
+            dropImageAt(targetId) {
+                if (!this.draggedImageId || this.draggedImageId === targetId) {
+                    this.draggedImageId = null;
+                    return;
+                }
+
+                const fromIndex = this.serverImages.findIndex(image => image.id === this.draggedImageId);
+                const toIndex = this.serverImages.findIndex(image => image.id === targetId);
+
+                if (fromIndex === -1 || toIndex === -1) {
+                    this.draggedImageId = null;
+                    return;
+                }
+
+                const [movedImage] = this.serverImages.splice(fromIndex, 1);
+                this.serverImages.splice(toIndex, 0, movedImage);
+                this.draggedImageId = null;
+            },
+
+            toggleImageDelete(imageId) {
+                const image = this.serverImages.find(item => item.id === imageId);
+                if (image) {
+                    image.deleted = !image.deleted;
+                }
+            },
+
+            visibleImageCount() {
+                return this.serverImages.filter(image => !image.deleted).length + this.imagesPreviews.length;
             },
             
             attemptSubmit(event) {
@@ -371,7 +510,7 @@
                 let parsedPrice = parseFloat(this.price);
                 let parsedCost = parseFloat(this.cost);
                 let hasZeroPrice = (parsedPrice === 0 || isNaN(parsedPrice) || parsedCost === 0 || isNaN(parsedCost));
-                let hasNoImages = (this.imagesPreviews.length === 0 && !this.hasServerImages);
+                let hasNoImages = this.visibleImageCount() === 0;
                 
                 if (hasZeroPrice) {
                     this.$dispatch('open-modal', 'zero-price-modal');
@@ -384,7 +523,7 @@
             
             confirmZeroPrice() {
                 this.$dispatch('close-modal', 'zero-price-modal');
-                let hasNoImages = (this.imagesPreviews.length === 0 && !this.hasServerImages);
+                let hasNoImages = this.visibleImageCount() === 0;
                 
                 if (hasNoImages) {
                     // Pequeño timeout para permitir que el modal 1 termine su animación antes de abrir el modal 2
@@ -402,6 +541,7 @@
             },
 
             executeSubmit() {
+                this.syncNewImageInput();
                 this.isSubmitting = true;
                 const form = this.$refs.form || document.querySelector('form');
                 form.submit();

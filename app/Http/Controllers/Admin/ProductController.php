@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Media;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
@@ -129,12 +130,13 @@ class ProductController extends Controller
             'is_customizable'  => 'boolean',
             'location'         => 'nullable|string|max:255', // Nuevo campo en inventario
             'images.*'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image_order'      => 'nullable|string',
         ], $this->validationMessages());
 
         try {
             DB::transaction(function () use ($validated, $request) {
                 // Separar la data del producto de la data extraída
-                $productData = collect($validated)->except(['images', 'location'])->toArray();
+                $productData = collect($validated)->except(['images', 'location', 'image_order'])->toArray();
                 $product = Product::create($productData);
 
                 // Siempre crear registro de inventario con base al DDL
@@ -149,6 +151,8 @@ class ProductController extends Controller
                         $product->addMedia($image)->toMediaCollection('product_images');
                     }
                 }
+
+                $this->syncProductImagesOrder($product, $request->input('image_order'));
             });
 
             return redirect()->route('admin.products.index')
@@ -191,11 +195,12 @@ class ProductController extends Controller
             'images.*'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'delete_images'    => 'nullable|array',
             'delete_images.*'  => 'exists:media,id',
+            'image_order'      => 'nullable|string',
         ], $this->validationMessages());
 
         try {
             DB::transaction(function () use ($validated, $request, $product) {
-                $productData = collect($validated)->except(['images', 'delete_images', 'location'])->toArray();
+                $productData = collect($validated)->except(['images', 'delete_images', 'location', 'image_order'])->toArray();
                 $product->update($productData);
 
                 // Actualizar o crear registro de inventario y su ubicación
@@ -213,6 +218,8 @@ class ProductController extends Controller
                 if ($request->has('delete_images')) {
                     $product->media()->whereIn('id', $request->delete_images)->delete();
                 }
+
+                $this->syncProductImagesOrder($product, $request->input('image_order'));
             });
 
             return redirect()->route('admin.products.index')
@@ -234,5 +241,23 @@ class ProductController extends Controller
             }
             return back()->with('error', 'Error al intentar eliminar el registro físico.');
         }
+    }
+
+    protected function syncProductImagesOrder(Product $product, ?string $encodedOrder): void
+    {
+        $mediaIds = $product->getMedia('product_images')->pluck('id')->all();
+
+        if (empty($mediaIds)) {
+            return;
+        }
+
+        $requestedOrder = json_decode($encodedOrder ?? '[]', true);
+        $requestedOrder = is_array($requestedOrder) ? array_values(array_filter($requestedOrder)) : [];
+
+        $orderedIds = array_values(array_intersect($requestedOrder, $mediaIds));
+        $remainingIds = array_values(array_diff($mediaIds, $orderedIds));
+        $finalOrder = array_merge($orderedIds, $remainingIds);
+
+        Media::setNewOrder($finalOrder);
     }
 }
