@@ -110,7 +110,7 @@ class ProductController extends Controller
         $request->merge([
             'slug' => \Illuminate\Support\Str::slug($request->name),
             'is_active' => $request->has('is_active'),
-            'track_inventory' => true, // <-- Fíjalo en true
+            'track_inventory' => true,
             'is_customizable' => true,
         ]);
 
@@ -127,6 +127,7 @@ class ProductController extends Controller
             'price'            => 'required|numeric|min:0',
             'cost'             => 'required|numeric|min:0',
             'is_active'        => 'boolean', 
+            'track_inventory'  => 'boolean',
             'is_customizable'  => 'boolean',
             'location'         => 'nullable|string|max:255', // Nuevo campo en inventario
             'images.*'         => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -137,6 +138,8 @@ class ProductController extends Controller
             DB::transaction(function () use ($validated, $request) {
                 // Separar la data del producto de la data extraída
                 $productData = collect($validated)->except(['images', 'location', 'image_order'])->toArray();
+                $productData['track_inventory'] = true;
+                $productData['is_customizable'] = true;
                 $product = Product::create($productData);
 
                 // Siempre crear registro de inventario con base al DDL
@@ -172,7 +175,7 @@ class ProductController extends Controller
         $request->merge([
             'slug' => \Illuminate\Support\Str::slug($request->name),
             'is_active' => $request->has('is_active'),
-            'track_inventory' => $request->has('track_inventory'),
+            'track_inventory' => true,
             'is_customizable' => true,
         ]);
 
@@ -201,6 +204,8 @@ class ProductController extends Controller
         try {
             DB::transaction(function () use ($validated, $request, $product) {
                 $productData = collect($validated)->except(['images', 'delete_images', 'location', 'image_order'])->toArray();
+                $productData['track_inventory'] = true;
+                $productData['is_customizable'] = true;
                 $product->update($productData);
 
                 // Actualizar o crear registro de inventario y su ubicación
