@@ -18,7 +18,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use App\Models\User;
 
 class QuotationController extends Controller
 {
@@ -58,26 +57,37 @@ class QuotationController extends Controller
             return $quotation;
         });
 
-        $adminEmails = User::whereHas('roles', function ($query) {
-            $query->where('name', 'admin');
-        })->pluck('email')->filter()->values();
+        $quotation->loadMissing(['customer.user', 'product']);
 
-        if ($adminEmails->isNotEmpty()) {
-            $quotation->loadMissing(['customer.user', 'product']);
+        $customerEmail = $quotation->customer?->user?->email;
 
+        if ($customerEmail) {
             try {
-                foreach ($adminEmails as $adminEmail) {
-                    Mail::send('emails.quotations.new-quotation-admin', ['quotation' => $quotation], function ($message) use ($adminEmail, $quotation) {
-                        $message->to($adminEmail)
-                            ->subject('Nueva cotización recibida: ' . $quotation->subject);
-                    });
-                }
+                Mail::send('emails.quotations.new-quotation-customer', ['quotation' => $quotation], function ($message) use ($customerEmail, $quotation) {
+                    $message->to($customerEmail)
+                        ->subject('Hemos recibido tu cotización: ' . $quotation->subject);
+                });
             } catch (\Exception $e) {
-                logger()->error('No se pudo enviar la notificación de nueva cotización.', [
+                logger()->error('No se pudo enviar la confirmación al cliente.', [
                     'quotation_id' => $quotation->id,
+                    'customer_email' => $customerEmail,
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+
+        $supportEmail = 'soporte@carpintec.com';
+
+        try {
+            Mail::send('emails.quotations.new-quotation-admin', ['quotation' => $quotation], function ($message) use ($supportEmail, $quotation) {
+                $message->to($supportEmail)
+                    ->subject('Nueva cotización recibida: ' . $quotation->subject);
+            });
+        } catch (\Exception $e) {
+            logger()->error('No se pudo enviar la notificación de nueva cotización.', [
+                'quotation_id' => $quotation->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return redirect()->route('quotations.index')
