@@ -18,44 +18,36 @@ class InventoryController extends Controller
         $filter = $request->query('filter');
         $sort = $request->query('sort');
         $direction = $request->query('direction', 'asc');
-
-        // KPIs
         $totalTracked = Product::where('track_inventory', true)->count();
         $lowStockCount = Product::where('track_inventory', true)
-            ->whereHas('inventory', function($q) {
+            ->whereHas('inventory', function ($q) {
                 $q->whereColumn('quantity', '<=', 'min_quantity');
             })->count();
 
-        // 1. Consulta Base con select('products.*') para evitar colisión de IDs al hacer JOIN
         $query = Product::select('products.*')
             ->with('inventory')
             ->where('track_inventory', true);
 
-        // 2. Búsqueda
         if ($search) {
-            $query->where(function($sq) use ($search) {
+            $query->where(function ($sq) use ($search) {
                 $sq->where('products.name', 'ilike', "%{$search}%")
-                   ->orWhere('products.sku', 'ilike', "%{$search}%");
+                    ->orWhere('products.sku', 'ilike', "%{$search}%");
             });
         }
 
-        // 3. Filtro Bajo Stock
         if ($filter === 'low_stock') {
             $query->whereHas('inventory', fn($iq) => $iq->whereColumn('quantity', '<=', 'min_quantity'));
         }
 
-        // 4. Ordenamiento Dinámico
         $allowedSorts = ['sku', 'name', 'quantity', 'min_quantity', 'location'];
-        
+
         if ($sort && in_array($sort, $allowedSorts)) {
             $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
-            
-            // Si la columna pertenece a la tabla inventory, hacemos el JOIN al vuelo
+
             if (in_array($sort, ['quantity', 'min_quantity', 'location'])) {
                 $query->leftJoin('inventory', 'products.id', '=', 'inventory.product_id')
-                      ->orderBy("inventory.{$sort}", $direction);
+                    ->orderBy("inventory.{$sort}", $direction);
             } else {
-                // Columnas propias de products
                 $query->orderBy("products.{$sort}", $direction);
             }
         } else {
@@ -85,7 +77,6 @@ class InventoryController extends Controller
 
     public function storeAdjustment(Request $request, Product $product)
     {
-        // Ahora permitimos cantidad 0, por si solo quieren cambiar la ubicación o el mínimo
         $validated = $request->validate([
             'quantity'     => 'required|integer',
             'reference'    => 'nullable|string|max:255',
@@ -94,7 +85,6 @@ class InventoryController extends Controller
         ]);
 
         try {
-            // INICIA TRANSACCIÓN DE BASE DE DATOS (Todo o Nada)
             DB::beginTransaction();
 
             $inventory = \App\Models\Inventory::firstOrCreate(
@@ -109,7 +99,6 @@ class InventoryController extends Controller
                 return back()->withInput()->with('error', 'El ajuste resulta en stock negativo. Operación cancelada.');
             }
 
-            // Solo registramos el movimiento histórico si de verdad sumaron o restaron piezas
             if ($adjustment !== 0) {
                 InventoryMovement::create([
                     'product_id'         => $product->id,
@@ -121,20 +110,17 @@ class InventoryController extends Controller
                 ]);
             }
 
-            // Actualizamos piezas, stock mínimo y ubicación al mismo tiempo
             $inventory->update([
                 'quantity'     => $newQuantity,
                 'min_quantity' => $validated['min_quantity'],
                 'location'     => $validated['location'],
             ]);
 
-            // SI TODO SALIÓ BIEN, GUARDAMOS EN POSTGRESQL
             DB::commit();
 
             return redirect()->route('admin.inventory.index')
                 ->with('success', 'Ficha de inventario actualizada correctamente.');
         } catch (\Exception $e) {
-            // SI ALGO FALLA, REVERTIMOS TODO PARA NO CORROMPER EL INVENTARIO
             DB::rollBack();
             return back()->with('error', 'Ocurrió un error crítico al procesar el inventario.');
         }

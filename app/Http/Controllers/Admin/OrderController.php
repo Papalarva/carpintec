@@ -28,7 +28,6 @@ class OrderController extends Controller
                 $query->withTrashed();
             }]);
 
-        // 1. Filtro de Búsqueda
         if ($search) {
             $query->where(function ($q) use ($search) {
                 // Casteamos el ID a texto para poder usar LIKE
@@ -43,12 +42,10 @@ class OrderController extends Controller
             });
         }
 
-        // 2. Filtro de Estado
         if ($status && OrderStatus::tryFrom((int)$status)) {
             $query->where('status_id', $status);
         }
 
-        // 3. Ordenamiento Dinámico (Whitelist)
         $allowedSorts = ['id', 'total', 'status_id', 'created_at'];
 
         if ($sort && in_array($sort, $allowedSorts)) {
@@ -58,7 +55,6 @@ class OrderController extends Controller
             $query->latest();
         }
 
-        // 4. Paginación preservando parámetros
         $orders = $query->paginate(15)->appends(compact('search', 'status', 'sort', 'direction'));
 
         return view('admin.orders.index', compact('orders', 'search', 'status'));
@@ -98,7 +94,6 @@ class OrderController extends Controller
         $this->handleInventoryOnStatusChange($order, $newStatus, $oldStatus);
         $order->loadMissing('items.product.inventory');
 
-        // OPCIÓN A PRUEBA DE BALAS: Usar el modelo directamente en lugar de la relación
         \App\Models\OrderStatusHistory::create([
             'order_id'   => $order->id,
             'status_id'  => $newStatus->value,
@@ -127,9 +122,7 @@ class OrderController extends Controller
         if ($order->shipment) {
             $order->shipment->update($validated);
         } else {
-            // 👇 AQUÍ ESTÁ EL ARREGLO: Le heredamos la dirección del pedido al envío
             $validated['address_id'] = $order->shipping_address_id;
-
             $shipment = Shipment::create($validated);
             $order->update(['shipment_id' => $shipment->id]);
         }
@@ -151,7 +144,6 @@ class OrderController extends Controller
 
     private function handleInventoryOnStatusChange(Order $order, OrderStatus $newStatus, OrderStatus $oldStatus): void
     {
-        // No hacemos nada si el estado no cambia realmente
         if ($newStatus === $oldStatus) {
             return;
         }
@@ -165,8 +157,6 @@ class OrderController extends Controller
         $isNewStateConsuming = in_array($newStatus, $consumingStates, true);
         $wasOldStateConsuming = in_array($oldStatus, $consumingStates, true);
 
-        // CASO 1: El pedido pasa a un estado que consume stock y no tenía movimientos de salida previos
-
         if ($isNewStateConsuming && !$wasOldStateConsuming) {
             foreach ($order->items as $item) {
 
@@ -177,7 +167,6 @@ class OrderController extends Controller
 
                 $product = $item->product;
 
-                // Solo si el producto tiene control de inventario activado
                 if (!$product->track_inventory) {
                     continue;
                 }
@@ -193,7 +182,7 @@ class OrderController extends Controller
                 $movement = InventoryMovement::create([
                     'product_id'        => $product->id,
                     'movement_type'     => InventoryMovement::TYPE_SALE,
-                    'quantity'          => -$item->quantity, // negativo = salida
+                    'quantity'          => -$item->quantity, 
                     'resulting_quantity' => $newQuantity,
                     'reference'         => "Pedido #{$order->id}",
                     'user_id'           => Auth::id(),

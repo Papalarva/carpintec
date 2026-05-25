@@ -15,12 +15,11 @@ class QuotationController extends Controller
         $search = $request->query('search');
         $status = $request->query('status');
         $sort = $request->query('sort');
-        $direction = $request->query('direction', 'desc'); // Por defecto, las más recientes
+        $direction = $request->query('direction', 'desc');
 
         $query = Quotation::query()
             ->with(['customer.user', 'product']);
 
-        // 1. Filtro de Búsqueda
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('subject', 'ilike', "%{$search}%")
@@ -33,12 +32,10 @@ class QuotationController extends Controller
             });
         }
 
-        // 2. Filtro de Estado
         if ($status && in_array($status, ['pending','reviewing','quoted','approved','rejected'])) {
             $query->where('status', $status);
         }
 
-        // 3. Ordenamiento Dinámico (Whitelist)
         $allowedSorts = ['subject', 'status', 'estimated_price', 'created_at'];
         
         if ($sort && in_array($sort, $allowedSorts)) {
@@ -48,7 +45,6 @@ class QuotationController extends Controller
             $query->latest();
         }
 
-        // 4. Paginación preservando URL
         $quotations = $query->paginate(15)->appends(['search' => $search, 'status' => $status, 'sort' => $sort, 'direction' => $direction]);
 
         return view('admin.quotations.index', compact('quotations', 'search', 'status'));
@@ -109,7 +105,7 @@ class QuotationController extends Controller
             }, 
             'product', 
             'media',
-            'messages.media' // Cargamos las imágenes del chat
+            'messages.media' 
         ]);
         
         return view('admin.quotations.show', compact('quotation'));

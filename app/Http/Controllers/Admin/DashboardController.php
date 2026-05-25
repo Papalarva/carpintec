@@ -11,15 +11,16 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Customer;
 use App\Enums\OrderStatus;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
-        // 👑 ZONA DEL ADMINISTRADOR (Analítica y Finanzas)
-        if ($user->hasRole('admin')) {
+        if (optional($user)->hasRole('admin')) {
 
             $totalRevenue = Order::sum('total') ?? 0;
             $totalOrders = Order::count();
@@ -29,13 +30,11 @@ class DashboardController extends Controller
                 ->whereColumn('inventory.quantity', '<=', 'inventory.min_quantity')
                 ->count();
 
-            // Configuración de la gráfica principal
             $salesChartConfig = [
                 'labels' => ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
                 'data' => [12000, 19000, 15000, 22000, 18000, 25000],
             ];
 
-            // NUEVO: Datos para el Embudo de Ventas (Ejemplo con datos estáticos iniciales)
             $funnelData = [
                 'visits' => 4500,
                 'carts' => 850,
@@ -43,17 +42,28 @@ class DashboardController extends Controller
                 'purchases' => $totalOrders
             ];
 
-            // NUEVO: Top 3 Muebles más vendidos (Consulta de ejemplo)
-            /* $topProducts = Product::withCount('orders')
-                                 ->orderBy('orders_count', 'desc')
-                                 ->take(3)
-                                 ->get(); */
-            // Mock temporal para la vista:
-            $topProducts = [
-                (object)['name' => 'Mesa Comedor Nogal', 'sales' => 24, 'revenue' => 45000, 'image' => null],
-                (object)['name' => 'Silla Minimalista Roble', 'sales' => 18, 'revenue' => 12500, 'image' => null],
-                (object)['name' => 'Credenza Parota', 'sales' => 12, 'revenue' => 38000, 'image' => null],
-            ];
+            $topProducts = DB::table('order_items')
+                ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                ->join('products', 'order_items.product_id', '=', 'products.id')
+                ->whereNotIn('orders.status_id', [
+                    OrderStatus::CANCELLED->value,
+                    OrderStatus::RETURNED->value,
+                ])
+                ->selectRaw('products.name, products.sku, SUM(order_items.quantity) as total_sold, SUM(order_items.quantity * order_items.unit_price) as total_revenue')
+                ->groupBy('products.id', 'products.name', 'products.sku')
+                ->orderByDesc('total_revenue')
+                ->limit(5)
+                ->get()
+                ->map(function ($item) {
+                    return (object) [
+                        'name' => $item->name,
+                        'sku' => $item->sku,
+                        'sales' => (int) $item->total_sold,
+                        'revenue' => (float) $item->total_revenue,
+                        'total_sold' => (int) $item->total_sold,
+                        'total_revenue' => (float) $item->total_revenue,
+                    ];
+                });
 
             return view('admin.dashboard', compact(
                 'totalRevenue',
@@ -68,7 +78,7 @@ class DashboardController extends Controller
         }
 
         // 👷‍♂️ ZONA DEL WORKER (Operaciones Diarias)
-        if ($user->hasRole('worker')) {
+        if (optional($user)->hasRole('worker')) {
 
             $pendingQuotations = Quotation::where('status', 'pending')->count();
             $lowStockProducts = Product::join('inventory', 'products.id', '=', 'inventory.product_id')

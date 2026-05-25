@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -71,6 +72,17 @@ class Product extends Model implements HasMedia
     public function inventory()
     {
         return $this->hasOne(Inventory::class, 'product_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'product_id');
+    }
+
+    public function orders(): BelongsToMany
+    {
+        return $this->belongsToMany(Order::class, 'order_items', 'product_id', 'order_id')
+            ->withPivot(['quantity', 'unit_price', 'unit_discount', 'inventory_movement_id']);
     }
 
     // Accesor helper para la imagen de portada (la primera en orden)

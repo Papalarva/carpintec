@@ -12,7 +12,6 @@ class ReportController extends Controller
 {
     public function index()
     {
-        // 1. Historial de Ventas por Mes
         $salesByMonth = DB::table('orders')
             ->whereNotIn('status_id', [
                 OrderStatus::CANCELLED->value,
@@ -28,13 +27,11 @@ class ReportController extends Controller
                 'count'   => (int) $row->count,
             ]);
 
-        // 2. Preparar datos para la Gráfica de Chart.js
         $chartData = [
             'labels' => $salesByMonth->pluck('month')->map(fn($m) => ucfirst($m))->toArray(),
             'revenues' => $salesByMonth->pluck('revenue')->toArray(),
         ];
 
-        // 3. Top 5 Productos Más Vendidos (Cruzando order_items y products)
         $topProducts = DB::table('order_items')
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->join('products', 'order_items.product_id', '=', 'products.id')

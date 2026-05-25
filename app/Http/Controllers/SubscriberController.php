@@ -12,9 +12,6 @@ use Illuminate\Support\Facades\Mail;
 
 class SubscriberController extends Controller
 {
-    /**
-     * Guarda un nuevo correo en el newsletter, sincroniza y envía bienvenida.
-     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -25,7 +22,6 @@ class SubscriberController extends Controller
         ]);
 
         try {
-            // Guardamos el resultado de la transacción en una variable
             $subscriber = DB::transaction(function () use ($validated) {
                 $email = strtolower($validated['email']);
                 $customerId = null;
@@ -43,7 +39,6 @@ class SubscriberController extends Controller
                     }
                 }
 
-                // updateOrCreate devuelve el modelo actualizado o recién creado
                 return Subscriber::updateOrCreate(
                     ['email' => $email],
                     [

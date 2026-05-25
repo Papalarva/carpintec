@@ -19,12 +19,16 @@
                 <h2 class="text-sm uppercase tracking-widest font-bold text-gray-400 mb-6">Resumen del Pedido</h2>
                 
                 <div class="space-y-4 mb-8">
-                    @foreach($order->items as $item)
+                    @forelse($order->items as $item)
                         <div class="flex justify-between text-sm font-sans">
                             <span class="text-gray-600">{{ $item->product->name }} <span class="text-gray-400">x{{ $item->quantity }}</span></span>
                             <span class="font-semibold text-gray-900">${{ number_format($item->unit_price * $item->quantity, 2) }}</span>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                            {{ $order->quotation?->subject ?? 'Proyecto personalizado' }}
+                        </div>
+                    @endforelse
                 </div>
 
                 <div class="border-t border-gray-50 pt-4 space-y-2">

@@ -76,15 +76,10 @@
                                     <span class="text-sm font-sans text-gray-500 font-normal">MXN</span>
                                 </span>
 
-                                @if ($quotation->status->value === 'quoted')
+                                @if (in_array($quotation->status->value, ['quoted', 'approved']))
                                     <a href="{{ route('quotations.checkout', $quotation) }}" class="mt-6 flex w-full justify-center bg-amber-900 text-white hover:bg-amber-800 uppercase tracking-widest text-xs font-bold rounded-xl px-8 py-4 transition-colors shadow-sm focus:outline-none">
                                         Proceder al Pago
                                     </a>
-                                @elseif($quotation->status->value === 'approved')
-                                    <div class="mt-6 px-4 py-3 bg-green-50 border border-green-200 rounded-xl flex items-center justify-center gap-2 text-green-700 shadow-sm">
-                                        <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path></svg>
-                                        <span class="font-bold uppercase tracking-widest text-[10px]">Proyecto en Producción</span>
-                                    </div>
                                 @endif
                             </div>
                         @endif

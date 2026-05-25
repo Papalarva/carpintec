@@ -2,12 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
 use App\Enums\QuotationStatus;
 use App\Http\Requests\StoreQuotationRequest;
+use App\Models\Address;
+use App\Models\Inventory;
+use App\Models\InventoryMovement;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\Payment;
 use App\Models\Quotation;
+use App\Models\Shipment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Models\User;
 
 class QuotationController extends Controller
 {
@@ -32,17 +43,42 @@ class QuotationController extends Controller
         $data = $request->validated();
         $data['customer_id'] = $customer->id;
         $data['status'] = QuotationStatus::PENDING;
-        
-        // Evitamos intentar guardar el arreglo de archivos en la base de datos relacional
+
         unset($data['attachments']);
 
-        $quotation = Quotation::create($data);
+        $quotation = DB::transaction(function () use ($data, $request) {
+            $quotation = Quotation::create($data);
 
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $quotation->addMedia($file)->toMediaCollection('quotation_files', 'public');
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $quotation->addMedia($file)->toMediaCollection('quotation_files', 'public');
+                }
             }
-        }       
+
+            return $quotation;
+        });
+
+        $adminEmails = User::whereHas('roles', function ($query) {
+            $query->where('name', 'admin');
+        })->pluck('email')->filter()->values();
+
+        if ($adminEmails->isNotEmpty()) {
+            $quotation->loadMissing(['customer.user', 'product']);
+
+            try {
+                foreach ($adminEmails as $adminEmail) {
+                    Mail::send('emails.quotations.new-quotation-admin', ['quotation' => $quotation], function ($message) use ($adminEmail, $quotation) {
+                        $message->to($adminEmail)
+                            ->subject('Nueva cotización recibida: ' . $quotation->subject);
+                    });
+                }
+            } catch (\Exception $e) {
+                logger()->error('No se pudo enviar la notificación de nueva cotización.', [
+                    'quotation_id' => $quotation->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return redirect()->route('quotations.index')
             ->with('success', 'Tu solicitud de cotización ha sido enviada. Te contactaremos pronto.');
@@ -95,7 +131,6 @@ class QuotationController extends Controller
     {
         if ($this->isNotOwner($quotation)) abort(403);
 
-        // Solo se puede pagar si ya tiene precio y está cotizada o aprobada
         if (!in_array($quotation->status->value, ['quoted', 'approved']) || !$quotation->estimated_price) {
             return redirect()->route('quotations.show', $quotation)
                 ->with('error', 'Esta cotización aún no está lista para pago.');
@@ -104,7 +139,6 @@ class QuotationController extends Controller
         $customer = Auth::user()->customer;
         $addresses = $customer->addresses()->latest()->get();
 
-        // Si no tiene direcciones, lo mandamos a crear una y lo devolvemos aquí
         if ($addresses->isEmpty()) {
             session(['url.intended.address' => route('quotations.checkout', $quotation)]);
             return redirect()->route('addresses.create')
@@ -118,34 +152,92 @@ class QuotationController extends Controller
     {
         if ($this->isNotOwner($quotation)) abort(403);
 
-        $request->validate([
-            'address_id' => 'required|exists:addresses,id',
+        $customer = Auth::user()->customer;
+
+        $validated = $request->validate([
+            'address_id' => 'required|exists:addresses,id,customer_id,' . $customer->id,
             'notes'      => 'nullable|string|max:1000',
         ]);
 
-        // Aseguramos que la dirección pertenezca al cliente
-        $address = \App\Models\Address::where('id', $request->address_id)
-            ->where('customer_id', Auth::user()->customer->id)
+        $address = Address::where('id', $validated['address_id'])
+            ->where('customer_id', $customer->id)
             ->firstOrFail();
 
-        // AQUÍ SE CREA EL PEDIDO (Order)
-        // Como el módulo de Orders lo haremos después, dejamos la estructura base preparada:
-        /*
-        $order = Order::create([
-            'customer_id' => Auth::user()->customer->id,
-            'address_id'  => $address->id,
-            'total'       => $quotation->estimated_price,
-            'notes'       => $request->notes,
-            'status'      => 'pending_payment',
-            'is_custom'   => true, // Bandera para saber que viene de cotización
-        ]);
-        */
+        try {
+            $order = DB::transaction(function () use ($customer, $address, $quotation, $validated) {
+                $shipment = Shipment::create([
+                    'address_id'      => $address->id,
+                    'shipping_method' => 'cotizacion',
+                    'cost'            => 0,
+                    'status'          => 'pending',
+                ]);
 
-        // Por ahora, solo cambiamos el estado de la cotización a Aprobada/Procesando
-        $quotation->update(['status' => 'approved']);
+                $order = Order::create([
+                    'customer_id'         => $customer->id,
+                    'shipping_address_id' => $address->id,
+                    'shipment_id'         => $shipment->id,
+                    'quotation_id'        => $quotation->id,
+                    'status_id'           => OrderStatus::PENDING->value,
+                    'subtotal'            => $quotation->estimated_price,
+                    'discount_total'      => 0,
+                    'shipping_cost'       => 0,
+                    'total'               => $quotation->estimated_price,
+                    'notes'               => $validated['notes'] ?? null,
+                ]);
 
-        return redirect()->route('quotations.index')
-            ->with('success', '¡Pedido confirmado! Hemos recibido tu solicitud de fabricación. Te enviaremos los detalles de pago a tu correo.');
+                if ($quotation->product_id) {
+                    $product = $quotation->product;
+                    $orderItem = $order->items()->create([
+                        'product_id'    => $product->id,
+                        'quantity'      => 1,
+                        'unit_price'    => $quotation->estimated_price,
+                        'unit_discount' => 0,
+                    ]);
+
+                    if ($product->track_inventory) {
+                        $inventory = Inventory::where('product_id', $product->id)->lockForUpdate()->firstOrFail();
+
+                        if ($inventory->quantity < 1) {
+                            throw new \Exception("Stock insuficiente para el producto: {$product->name}");
+                        }
+
+                        $inventory->decrement('quantity', 1);
+
+                        $movement = InventoryMovement::create([
+                            'product_id'         => $product->id,
+                            'movement_type'      => 'salida',
+                            'quantity'           => 1,
+                            'resulting_quantity' => $inventory->quantity,
+                            'reference'          => "Pedido #{$order->id}",
+                            'user_id'            => request()->user()?->id,
+                        ]);
+
+                        $orderItem->update(['inventory_movement_id' => $movement->id]);
+                    }
+                }
+
+                Payment::create([
+                    'order_id'  => $order->id,
+                    'status_id' => PaymentStatus::PENDING->value,
+                    'amount'    => $quotation->estimated_price,
+                ]);
+
+                $quotation->update(['status' => QuotationStatus::APPROVED]);
+
+                return $order;
+            });
+
+            return redirect()->route('orders.confirmation', $order)
+                ->with('success', '¡Pedido confirmado! Hemos recibido tu solicitud de fabricación. Te enviaremos los detalles de pago a tu correo.');
+        } catch (\Throwable $e) {
+            logger()->error('Error al convertir cotización en pedido.', [
+                'quotation_id' => $quotation->id,
+                'customer_id' => $customer->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'No pudimos convertir la cotización en pedido. Intenta nuevamente.');
+        }
     }
     
     public function show(Quotation $quotation)
@@ -155,7 +247,6 @@ class QuotationController extends Controller
                 ->with('error', 'Acceso denegado. Esta cotización no pertenece a tu cuenta.');
         }
 
-        // Cargamos la relación de mensajes y sus imágenes (media)
         $quotation->load(['product', 'media', 'messages.media']);
 
         return view('quotations.show', compact('quotation'));

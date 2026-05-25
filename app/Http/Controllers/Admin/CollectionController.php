@@ -16,26 +16,21 @@ class CollectionController extends Controller
         $sort = $request->query('sort');
         $direction = $request->query('direction', 'asc');
 
-        // withCount crea automáticamente la columna virtual 'products_count'
         $query = Collection::withCount('products');
 
-        // 1. Filtro de Búsqueda
         if ($search) {
             $query->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('description', 'ilike', "%{$search}%");
+                ->orWhere('description', 'ilike', "%{$search}%");
         }
 
-        // 2. Ordenamiento Dinámico
         $allowedSorts = ['name', 'products_count', 'is_active'];
         if ($sort && in_array($sort, $allowedSorts)) {
             $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
             $query->orderBy($sort, $direction);
         } else {
-            // Orden por defecto
             $query->latest();
         }
 
-        // 3. Paginación preservando parámetros
         $collections = $query->paginate(15)->appends(compact('search', 'sort', 'direction'));
 
         return view('admin.collections.index', compact('collections', 'search'));
@@ -52,19 +47,18 @@ class CollectionController extends Controller
         try {
             $collection->delete();
             return redirect()->route('admin.collections.index')
-                             ->with('success', 'Colección eliminada.');
+                ->with('success', 'Colección eliminada.');
         } catch (\Exception $e) {
             return redirect()->route('admin.collections.index')
-                             ->with('error', 'No se pudo eliminar la colección.');
+                ->with('error', 'No se pudo eliminar la colección.');
         }
     }
 
     public function edit(Collection $collection)
     {
-        // Traemos todos los productos activos y cargamos los IDs de los productos ya vinculados
         $products = Product::where('is_active', true)->get();
         $collectionProducts = $collection->products->pluck('id')->toArray();
-        
+
         return view('admin.collections.edit', compact('collection', 'products', 'collectionProducts'));
     }
 
@@ -74,7 +68,7 @@ class CollectionController extends Controller
             'name' => 'required|string|max:255|unique:collections,name',
             'description' => 'nullable|string',
             'products' => 'required|array',
-            'products.*' => 'exists:products,id' // Validamos que los IDs no estén alterados
+            'products.*' => 'exists:products,id'
         ], [
             'name.unique' => 'Ya existe una colección con este nombre.',
             'products.required' => 'Debes seleccionar al menos un producto para la colección.'
@@ -91,8 +85,7 @@ class CollectionController extends Controller
             $collection->products()->sync($request->products);
 
             return redirect()->route('admin.collections.index')
-                             ->with('success', 'Colección creada exitosamente.');
-
+                ->with('success', 'Colección creada exitosamente.');
         } catch (\Illuminate\Database\QueryException $e) {
             return back()->withInput()->with('error', 'Ocurrió un error en la base de datos al guardar la colección.');
         }
@@ -121,10 +114,9 @@ class CollectionController extends Controller
             $collection->products()->sync($request->products);
 
             return redirect()->route('admin.collections.index')
-                             ->with('success', 'Colección actualizada exitosamente.');
-
+                ->with('success', 'Colección actualizada exitosamente.');
         } catch (\Illuminate\Database\QueryException $e) {
-            if ($e->getCode() == '23505') { // Violación Unique
+            if ($e->getCode() == '23505') {
                 return back()->withInput()->with('error', 'Error de duplicidad detectado.');
             }
             return back()->withInput()->with('error', 'No se pudo actualizar la colección debido a un error interno.');

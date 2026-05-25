@@ -106,7 +106,6 @@ class ProductController extends Controller
 
     public function store(Request $request)
     { 
-        // En los métodos store() y update()
         $request->merge([
             'slug' => \Illuminate\Support\Str::slug($request->name),
             'is_active' => $request->has('is_active'),

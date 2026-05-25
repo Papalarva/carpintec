@@ -9,19 +9,19 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AddressController extends Controller
-{ 
+{
     public function __construct()
     {
         $this->middleware('auth');
-    } 
+    }
 
     public function index()
     {
         $customer = Auth::user()->customer;
         $addresses = $customer->addresses()->latest()->get();
-        
+
         return view('addresses.index', compact('addresses'));
-    } 
+    }
 
     public function create()
     {
@@ -29,7 +29,7 @@ class AddressController extends Controller
             session(['url.intended.address' => url()->previous()]);
         }
         return view('addresses.create');
-    } 
+    }
 
     public function store(AddressRequest $request)
     {
@@ -49,12 +49,11 @@ class AddressController extends Controller
 
             $redirectUrl = session()->pull('url.intended.address', route('addresses.index'));
             return redirect($redirectUrl)->with('success', 'Dirección guardada correctamente.');
-
         } catch (\Exception $e) {
             Log::error('Error al guardar dirección: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Ocurrió un error al guardar tu dirección. Por favor, intenta de nuevo.');
         }
-    } 
+    }
 
     public function edit(Address $address)
     {
@@ -67,7 +66,7 @@ class AddressController extends Controller
         }
 
         return view('addresses.edit', compact('address'));
-    } 
+    }
 
     public function update(AddressRequest $request, Address $address)
     {
@@ -79,7 +78,7 @@ class AddressController extends Controller
             DB::transaction(function () use ($request, $address) {
                 $validated = $request->validated();
                 $validated['is_primary'] = $request->boolean('is_primary');
-                
+
                 $address->update($validated);
 
                 if ($address->is_primary) {
@@ -89,12 +88,11 @@ class AddressController extends Controller
 
             $redirectUrl = session()->pull('url.intended.address', route('addresses.index'));
             return redirect($redirectUrl)->with('success', 'Dirección actualizada correctamente.');
-
         } catch (\Exception $e) {
             Log::error('Error al actualizar dirección: ' . $e->getMessage());
             return back()->withInput()->with('error', 'Ocurrió un error al actualizar tu dirección.');
         }
-    } 
+    }
 
     public function destroy(Address $address)
     {
@@ -104,7 +102,7 @@ class AddressController extends Controller
 
         $address->delete();
         return redirect()->route('addresses.index')->with('info', 'Dirección eliminada de tu libreta.');
-    } 
+    }
 
     public function setPrimary(Address $address)
     {
@@ -114,16 +112,16 @@ class AddressController extends Controller
 
         $this->setOnlyPrimary(Auth::user()->customer, $address);
         return back()->with('success', 'Dirección principal actualizada.');
-    } 
+    }
 
     private function setOnlyPrimary($customer, Address $address): void
     {
         $customer->addresses()->where('id', '!=', $address->id)
-                 ->where('is_primary', true)
-                 ->update(['is_primary' => false]);
-                 
+            ->where('is_primary', true)
+            ->update(['is_primary' => false]);
+
         $address->update(['is_primary' => true]);
-    } 
+    }
 
     private function isNotOwner(Address $address): bool
     {

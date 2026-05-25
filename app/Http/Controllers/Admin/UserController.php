@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -20,30 +21,26 @@ class UserController extends Controller
 
         $query = User::query();
 
-        // 1. Filtro de Estado de Cuenta (Soft Deletes)
         if ($accountStatus === 'disabled') {
             $query->onlyTrashed();
         } elseif ($accountStatus === 'all') {
             $query->withTrashed();
         }
 
-        // 2. Filtro de Búsqueda
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'ilike', "%{$search}%")
-                  ->orWhere('last_name', 'ilike', "%{$search}%")
-                  ->orWhere('email', 'ilike', "%{$search}%");
+                    ->orWhere('last_name', 'ilike', "%{$search}%")
+                    ->orWhere('email', 'ilike', "%{$search}%");
             });
         }
 
-        // 3. Filtro por Rol
         if ($roleId) {
-            $query->whereHas('roles', fn ($q) => $q->where('roles.id', $roleId));
+            $query->whereHas('roles', fn($q) => $q->where('roles.id', $roleId));
         }
 
-        // 4. Ordenamiento Dinámico Segurizado
         $allowedSorts = ['first_name', 'email', 'phone', 'created_at'];
-        
+
         if ($sort && in_array($sort, $allowedSorts)) {
             $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
             $query->orderBy($sort, $direction);
@@ -51,7 +48,6 @@ class UserController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        // 5. Paginación preservando todos los parámetros
         $users = $query->with('roles')->paginate(15)->withQueryString();
         $roles = Role::orderBy('name')->get();
 
@@ -84,46 +80,37 @@ class UserController extends Controller
                 'phone'      => $validated['phone'],
             ]);
 
-            // SOLUCIÓN: Usar el método nativo de Eloquent sync() adaptado a tu tabla polimórfica
-            // Si la vista no envía ningún rol (array vacío), se quitarán todos los roles del usuario.
             $user->roles()->sync($validated['roles'] ?? []);
 
             return redirect()->route('admin.users.index')
-                             ->with('success', 'Usuario actualizado correctamente.');
-                             
+                ->with('success', 'Usuario actualizado correctamente.');
         } catch (\Exception $e) {
-            // Regla de Oro: Manejo seguro y silencioso de errores
-            // (Si necesitas depurar en el futuro, puedes usar Log::error($e->getMessage()) aquí)
             return redirect()->back()
-                             ->withInput()
-                             ->with('error', 'Ocurrió un error al actualizar el usuario. Intenta de nuevo.');
+                ->withInput()
+                ->with('error', 'Ocurrió un error al actualizar el usuario. Intenta de nuevo.');
         }
     }
 
     public function destroy(User $user)
     {
-        // 🛡️ Capa de Seguridad: Prevenir Auto-Bloqueo
-        if (auth()->id() === $user->id) {
+        if (Auth::id() === $user->id) {
             return redirect()->back()->with('error', 'Por seguridad, no puedes deshabilitar tu propia cuenta activa.');
         }
 
         try {
-            // Elimina (Deshabilita) al usuario
             $user->delete();
 
             return redirect()->route('admin.users.index')
-                             ->with('success', 'Usuario deshabilitado correctamente del sistema.');
-                             
+                ->with('success', 'Usuario deshabilitado correctamente del sistema.');
         } catch (\Exception $e) {
             return redirect()->back()
-                             ->with('error', 'Ocurrió un error al intentar deshabilitar al usuario. Verifica las dependencias.');
+                ->with('error', 'Ocurrió un error al intentar deshabilitar al usuario. Verifica las dependencias.');
         }
     }
 
     public function restore($id)
     {
         try {
-            // Buscamos específicamente en los eliminados
             $user = User::onlyTrashed()->findOrFail($id);
             $user->restore();
 

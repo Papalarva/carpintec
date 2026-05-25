@@ -20,9 +20,11 @@ Se acaba de registrar una nueva orden de compra en la boutique. A continuación,
 <x-mail::table>
 | Producto | Cantidad | Subtotal |
 | :--- | :---: | ---: |
-@foreach($order->items as $item)
+@forelse($order->items as $item)
 | {{ $item->product->name }} | {{ $item->quantity }} | ${{ number_format($item->unit_price * $item->quantity, 2) }} |
-@endforeach
+@empty
+| Pedido personalizado | 1 | ${{ number_format($order->total, 2) }} |
+@endforelse
 </x-mail::table>
 
 @if($order->notes)

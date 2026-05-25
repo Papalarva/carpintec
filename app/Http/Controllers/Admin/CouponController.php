@@ -15,20 +15,17 @@ class CouponController extends Controller
         $search = $request->query('search');
         $sort = $request->query('sort');
         $direction = $request->query('direction', 'desc');
-
         $query = Coupon::query()->with('discount');
 
-        // 1. Filtro de Búsqueda
         if ($search) {
             $query->where('code', 'ilike', "%{$search}%")
-                  ->orWhereHas('discount', function($q) use ($search) {
-                      $q->where('name', 'ilike', "%{$search}%");
-                  });
+                ->orWhereHas('discount', function ($q) use ($search) {
+                    $q->where('name', 'ilike', "%{$search}%");
+                });
         }
 
-        // 2. Ordenamiento Dinámico
         $allowedSorts = ['code', 'used_count', 'max_uses', 'expires_at', 'created_at'];
-        
+
         if ($sort && in_array($sort, $allowedSorts)) {
             $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
             $query->orderBy($sort, $direction);
@@ -43,7 +40,6 @@ class CouponController extends Controller
 
     public function create()
     {
-        // Traemos la colección completa para mostrar el nombre y el valor en la vista
         $discounts = Discount::where('is_active', true)->orderBy('name')->get();
         return view('admin.coupons.create', compact('discounts'));
     }
@@ -83,9 +79,7 @@ class CouponController extends Controller
             'expires_at'  => 'nullable|date',
         ]);
 
-        // Aseguramos que el código siempre se guarde en mayúsculas
         $validated['code'] = strtoupper($validated['code']);
-
         $coupon->update($validated);
 
         return redirect()->route('admin.coupons.index')->with('success', 'Configuración del cupón actualizada.');

@@ -28,7 +28,7 @@ class CheckoutController extends Controller
     public function index()
     {
         $customer = request()->user()->customer;
-        
+
         if (!$customer->addresses()->exists()) {
             return redirect()->route('addresses.create')
                 ->with('warning', 'Registra una dirección de envío para continuar.');
@@ -42,7 +42,7 @@ class CheckoutController extends Controller
         $addresses = $customer->addresses;
         $shippingMethods = config('shipping.methods');
         $subtotal = $this->cart->getSubtotal();
-        
+
         $appliedCoupon = session('checkout.coupon_code');
         $discountAmount = 0;
         $couponError = null;
@@ -62,9 +62,16 @@ class CheckoutController extends Controller
         $total = max(0, $subtotal - $discountAmount) + $shippingCost;
 
         return view('checkout.index', compact(
-            'items', 'addresses', 'shippingMethods', 'subtotal',
-            'discountAmount', 'shippingCost', 'total', 'selectedShipping',
-            'appliedCoupon', 'couponError'
+            'items',
+            'addresses',
+            'shippingMethods',
+            'subtotal',
+            'discountAmount',
+            'shippingCost',
+            'total',
+            'selectedShipping',
+            'appliedCoupon',
+            'couponError'
         ));
     }
 
@@ -72,7 +79,7 @@ class CheckoutController extends Controller
     {
         $customer = request()->user()->customer;
         $items = $this->cart->getItems();
-        
+
         if ($items->isEmpty()) {
             return back()->with('error', 'El carrito está vacío.');
         }
@@ -87,7 +94,7 @@ class CheckoutController extends Controller
         $shippingMethod = $validated['shipping_method'];
         $shippingCost = config("shipping.methods.{$shippingMethod}.cost", 0);
         $subtotal = $this->cart->getSubtotal();
-        
+
         $discountAmount = 0;
         $coupon = null;
         $couponCode = session('checkout.coupon_code');
@@ -106,8 +113,16 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use (
-                $customer, $addressId, $shippingMethod, $shippingCost,
-                $subtotal, $discountAmount, $total, $items, $coupon, $validated
+                $customer,
+                $addressId,
+                $shippingMethod,
+                $shippingCost,
+                $subtotal,
+                $discountAmount,
+                $total,
+                $items,
+                $coupon,
+                $validated
             ) {
                 $shipment = Shipment::create([
                     'address_id'      => $addressId,
@@ -144,13 +159,13 @@ class CheckoutController extends Controller
                     if ($product->track_inventory) {
                         // Bloqueo estricto para evitar Race Conditions (Inventario Negativo)
                         $inventory = Inventory::where('product_id', $product->id)->lockForUpdate()->firstOrFail();
-                        
+
                         if ($inventory->quantity < $quantity) {
                             throw new \Exception("Stock insuficiente para el producto: {$product->name}");
                         }
 
                         $inventory->decrement('quantity', $quantity);
-                        
+
                         $movement = InventoryMovement::create([
                             'product_id'         => $product->id,
                             'movement_type'      => 'salida',
@@ -170,7 +185,7 @@ class CheckoutController extends Controller
 
                 Payment::create([
                     'order_id'  => $order->id,
-                    'status_id' => 1, // pending
+                    'status_id' => 1,
                     'amount'    => $total,
                 ]);
 
@@ -185,7 +200,6 @@ class CheckoutController extends Controller
 
             return redirect()->route('orders.confirmation', $order)
                 ->with('success', 'Pedido creado exitosamente. Está pendiente de pago.');
-
         } catch (\Exception $e) {
             Log::error('Error en Checkout: ' . $e->getMessage());
             return back()->with('error', 'Ocurrió un problema: ' . $e->getMessage());
@@ -201,7 +215,7 @@ class CheckoutController extends Controller
         try {
             $result = $this->discountService->applyCoupon($request->code, $items, $customer);
             session()->put('checkout.coupon_code', $request->code);
-            
+
             return response()->json([
                 'success'  => true,
                 'discount' => $result['amount'],
@@ -227,7 +241,7 @@ class CheckoutController extends Controller
     public function removeCoupon(Request $request)
     {
         session()->forget('checkout.coupon_code');
-        
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,

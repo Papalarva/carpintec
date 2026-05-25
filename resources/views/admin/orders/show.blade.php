@@ -43,7 +43,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
-                            @foreach ($order->items as $item)
+                            @forelse ($order->items as $item)
                                 <tr class="hover:bg-gray-50/50 transition-colors">
                                     <td class="px-8 py-4 font-medium text-gray-900">
                                         @if ($item->product)
@@ -60,7 +60,13 @@
                                     <td class="px-8 py-4 text-right text-gray-500">${{ number_format($item->unit_price, 2) }}</td>
                                     <td class="px-8 py-4 text-right font-bold text-gray-900">${{ number_format($item->quantity * $item->unit_price, 2) }}</td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="4" class="px-8 py-8 text-center text-sm text-gray-500">
+                                        Pedido personalizado sin productos ligados. Origen: {{ $order->quotation?->subject ?? 'Cotización sin producto' }}
+                                    </td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>

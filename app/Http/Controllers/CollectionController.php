@@ -9,11 +9,10 @@ class CollectionController extends Controller
 {
     public function index()
     {
-        // Cargamos los productos y su relación oficial 'media' de Spatie
         $collections = Collection::where('is_active', true)
-            ->with(['products' => function($query) {
+            ->with(['products' => function ($query) {
                 $query->where('is_active', true)
-                      ->with('media'); // <-- CORRECCIÓN AQUÍ
+                    ->with('media');
             }])
             ->get();
 
@@ -28,7 +27,7 @@ class CollectionController extends Controller
 
         $products = $collection->products()
             ->where('is_active', true)
-            ->with('media') // <-- CORRECCIÓN AQUÍ
+            ->with('media')
             ->paginate(12);
 
         return view('collections.show', compact('collection', 'products'));
@@ -36,11 +35,10 @@ class CollectionController extends Controller
 
     public function newest()
     {
-        // Obtenemos las últimas 6 colecciones activas y precargamos sus productos
         $collections = Collection::where('is_active', true)
-            ->with(['products' => function($query) {
+            ->with(['products' => function ($query) {
                 $query->where('is_active', true)
-                      ->with('media'); // Cargamos las imágenes de los productos
+                    ->with('media');
             }])
             ->latest()
             ->take(6)

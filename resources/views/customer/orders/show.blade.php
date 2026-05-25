@@ -33,7 +33,7 @@
                             <span class="text-sm text-gray-500">{{ $order->items->count() }} producto(s)</span>
                         </div>
                         <ul class="divide-y divide-gray-100">
-                            @foreach ($order->items as $item)
+                            @forelse ($order->items as $item)
                                 <li class="p-6 flex gap-6">
                                     {{-- Sustituye el bloque de la imagen (aprox. línea 34) por este: --}}
                                     <div
@@ -72,7 +72,14 @@
                                         <p class="text-sm text-gray-500">Cantidad: {{ $item->quantity }}</p>
                                     </div>
                                 </li>
-                            @endforeach
+                            @empty
+                                <li class="p-6">
+                                    <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 p-5 text-sm text-gray-600">
+                                        <p class="font-medium text-gray-900 mb-1">Pedido personalizado</p>
+                                        <p>{{ $order->quotation?->subject ?? 'La cotización no tiene productos asociados.' }}</p>
+                                    </div>
+                                </li>
+                            @endforelse
                         </ul>
 
                         {{-- Resumen de Totales --}}

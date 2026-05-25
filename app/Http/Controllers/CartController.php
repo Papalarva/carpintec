@@ -9,9 +9,7 @@ use Exception;
 
 class CartController extends Controller
 {
-    public function __construct(protected CartManager $cart)
-    {
-    }
+    public function __construct(protected CartManager $cart) {}
 
     public function index()
     {
@@ -29,21 +27,16 @@ class CartController extends Controller
 
         $quantity = $request->integer('quantity');
 
-        // BLINDAJE ACUMULATIVO DIRECTO
-        // Extraemos la validación aquí para que sea infalible.
         if ($product->track_inventory && $product->inventory) {
             $availableStock = $product->inventory->quantity;
-            
-            // Usamos las Colecciones de Laravel para buscar el producto en el carrito
-            // soportando tanto Objetos (BD) como Arrays (Sesión).
+
             $currentQtyNode = collect($this->cart->getItems())->first(function ($item) use ($product) {
                 $itemId = is_object($item) ? ($item->product_id ?? $item->product?->id ?? null) : ($item['product_id'] ?? $item['id'] ?? null);
                 return (string) $itemId === (string) $product->id;
             });
-            
-            $qtyInCart = $currentQtyNode ? (is_object($currentQtyNode) ? $currentQtyNode->quantity : $currentQtyNode['quantity']) : 0;
-            
-            // Si la suma supera el stock, rechazamos la petición inmediatamente.
+
+            $qtyInCart = $currentQtyNode ? (is_object($currentQtyNode) ? ($currentQtyNode->quantity ?? 0) : ($currentQtyNode['quantity'] ?? 0)) : 0;
+
             if (($qtyInCart + $quantity) > $availableStock) {
                 $faltantes = $availableStock - $qtyInCart;
 
@@ -52,7 +45,7 @@ class CartController extends Controller
                 } else {
                     $mensaje = "Solo puedes agregar {$faltantes} unidad(es) más. (Stock total: {$availableStock}).";
                 }
-                
+
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json(['message' => $mensaje], 422);
                 }
@@ -71,7 +64,6 @@ class CartController extends Controller
             }
 
             return redirect()->route('cart.index')->with('success', 'Producto agregado al carrito.');
-
         } catch (Exception $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['message' => $e->getMessage()], 422);
@@ -88,13 +80,11 @@ class CartController extends Controller
 
         $newQuantity = $request->integer('quantity');
 
-        // BLINDAJE DIRECTO AL ACTUALIZAR
-        // Evita que peticiones maliciosas (Postman/Console) burlen a Alpine.js
         if ($product->track_inventory && $product->inventory) {
             $availableStock = $product->inventory->quantity;
             if ($newQuantity > $availableStock) {
                 $mensaje = "Stock máximo alcanzado ({$availableStock} unidades).";
-                
+
                 if ($request->expectsJson() || $request->ajax()) {
                     return response()->json(['message' => $mensaje], 422);
                 }
@@ -114,7 +104,6 @@ class CartController extends Controller
             }
 
             return redirect()->route('cart.index')->with('success', 'Carrito actualizado.');
-
         } catch (Exception $e) {
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json(['message' => $e->getMessage()], 422);
