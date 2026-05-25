@@ -53,7 +53,7 @@ class Product extends Model implements HasMedia
         $this->addMediaCollection('product_images');
     }
 
-    public function registerMediaConversions(Media $media = null): void
+    public function registerMediaConversions(?Media $media = null): void
     {
         // Le decimos a Spatie que cree una copia optimizada en formato WebP
         $this->addMediaConversion('webp')
@@ -114,6 +114,25 @@ class Product extends Model implements HasMedia
         $cover->setAttribute('webp_path', $this->mediaPath($cover));
 
         return $cover;
+    }
+
+    public function mediaUrl(?Media $media, string $conversion = 'webp'): ?string
+    {
+        if (!$media) {
+            return null;
+        }
+
+        $path = $conversion !== '' && $media->hasGeneratedConversion($conversion)
+            ? $media->getPath($conversion)
+            : $media->getPath();
+
+        if (!is_file($path)) {
+            return null;
+        }
+
+        return $conversion !== '' && $media->hasGeneratedConversion($conversion)
+            ? $media->getUrl($conversion)
+            : $media->getUrl();
     }
 
     // Scopes (se mantienen)

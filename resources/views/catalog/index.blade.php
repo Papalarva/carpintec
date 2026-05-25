@@ -52,8 +52,13 @@
                             @endif
 
                             <div class="aspect-square w-full overflow-hidden rounded-2xl bg-gray-100 relative shadow-sm group-hover:shadow-xl transition-shadow duration-500">
-                                @if ($product->getFirstMedia('product_images'))
-                                    <img src="{{ $product->getFirstMedia('product_images')->getUrl('webp') }}"
+                                @php
+                                    $coverMedia = $product->getFirstMedia('product_images');
+                                    $coverImage = $product->mediaUrl($coverMedia) ?? asset('images/product-placeholder.svg');
+                                @endphp
+
+                                @if ($coverMedia)
+                                    <img src="{{ $coverImage }}"
                                          alt="{{ $product->name }}"
                                          class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out">
                                 @else

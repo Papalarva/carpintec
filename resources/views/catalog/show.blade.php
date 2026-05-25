@@ -37,8 +37,8 @@
         @php
             $productImages = $product->getMedia('product_images')->sortBy('order_column') ?? collect();
             $mainImage =
-                $product->getFirstMedia('product_images')?->getUrl('webp') ??
-                ($productImages->isNotEmpty() ? $productImages->first()->getUrl('webp') : '');
+                $product->mediaUrl($product->getFirstMedia('product_images')) ??
+                ($productImages->isNotEmpty() ? $product->mediaUrl($productImages->first()) : asset('images/product-placeholder.svg'));
         @endphp
 
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 mt-12">
@@ -50,10 +50,11 @@
                         @if ($productImages->count() > 1)
                             <div class="hidden md:flex flex-col space-y-4 w-20 xl:w-24 overflow-y-auto scrollbar-hide py-1">
                                 @foreach ($productImages as $image)
-                                    <button type="button" @click="mainImage = '{{ $image->getUrl('webp') }}'"
+                                    @php $imageUrl = $product->mediaUrl($image) ?? asset('images/product-placeholder.svg'); @endphp
+                                    <button type="button" @click="mainImage = '{{ $imageUrl }}'"
                                         class="aspect-[4/5] w-full flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-gray-100 border-2 transition-all duration-300 focus:outline-none"
-                                        :class="mainImage === '{{ $image->getUrl('webp') }}' ? 'border-amber-900 shadow-md opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-gray-300'">
-                                        <img src="{{ $image->getUrl('webp') }}" alt="Miniatura"
+                                        :class="mainImage === '{{ $imageUrl }}' ? 'border-amber-900 shadow-md opacity-100' : 'border-transparent opacity-60 hover:opacity-100 hover:border-gray-300'">
+                                        <img src="{{ $imageUrl }}" alt="Miniatura"
                                             class="h-full w-full object-cover object-center">
                                     </button>
                                 @endforeach
@@ -79,10 +80,11 @@
                     @if ($productImages->count() > 1)
                         <div class="md:hidden mt-4 flex space-x-3 overflow-x-auto pb-2 scrollbar-hide">
                             @foreach ($productImages as $image)
-                                <button type="button" @click="mainImage = '{{ $image->getUrl('webp') }}'"
+                                @php $imageUrl = $product->mediaUrl($image) ?? asset('images/product-placeholder.svg'); @endphp
+                                <button type="button" @click="mainImage = '{{ $imageUrl }}'"
                                     class="h-20 w-20 flex-shrink-0 cursor-pointer overflow-hidden rounded-xl bg-gray-50 border-2 transition-all duration-300 focus:outline-none"
-                                    :class="mainImage === '{{ $image->getUrl('webp') }}' ? 'border-amber-900 shadow-md opacity-100' : 'border-transparent opacity-60'">
-                                    <img src="{{ $image->getUrl('webp') }}" alt="Miniatura"
+                                    :class="mainImage === '{{ $imageUrl }}' ? 'border-amber-900 shadow-md opacity-100' : 'border-transparent opacity-60'">
+                                    <img src="{{ $imageUrl }}" alt="Miniatura"
                                         class="h-full w-full object-cover object-center">
                                 </button>
                             @endforeach
@@ -285,7 +287,7 @@
                             <div
                                 class="aspect-[4/5] w-full overflow-hidden rounded-2xl bg-gray-100 relative shadow-sm group-hover:shadow-premium-hover transition-shadow duration-500">
                                 @if ($relatedProduct->getFirstMedia('product_images'))
-                                    <img src="{{ $relatedProduct->getFirstMedia('product_images')?->getUrl('webp') }}"
+                                    <img src="{{ $relatedProduct->mediaUrl($relatedProduct->getFirstMedia('product_images')) ?? asset('images/product-placeholder.svg') }}"
                                         alt="{{ $relatedProduct->name }}"
                                         class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out">
                                 @else

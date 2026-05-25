@@ -18,7 +18,7 @@
                     @forelse($items as $item)
                         @php
                             $product = $item->product;
-                            $image = $product->getFirstMediaUrl('product_images', 'webp') ?: asset('images/placeholder.jpg');
+                            $image = $product->mediaUrl($product->getFirstMedia('product_images')) ?: asset('images/product-placeholder.svg');
                             $price = $product->price ?? 0;
                             
                             $maxStock = 99;

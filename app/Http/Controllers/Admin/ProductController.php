@@ -13,7 +13,7 @@ class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Product::select('products.*')->with(['category', 'inventory']);
+        $query = Product::select('products.*')->with(['category', 'inventory', 'media']);
 
         if ($request->filled('search')) {
             $searchTerm = '%' . $request->search . '%';
@@ -60,7 +60,7 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $categories = Category::orderBy('name')->get();
-        $product->load('inventory');
+        $product->load(['inventory', 'media']);
         return view('admin.products.edit', compact('product', 'categories'));
     }
 

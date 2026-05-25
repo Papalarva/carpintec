@@ -37,7 +37,7 @@
                             <div class="aspect-square w-full overflow-hidden rounded-2xl bg-gray-100 relative shadow-sm group-hover:shadow-xl transition-shadow duration-500">
                                 @php
                                     // Extracción directa de URL con Spatie
-                                    $productImageUrl = $product->getFirstMediaUrl('product_images') ?: asset('images/no-product.jpg');
+                                    $productImageUrl = $product->mediaUrl($product->getFirstMedia('product_images')) ?: asset('images/product-placeholder.svg');
                                 @endphp
                                 
                                 <img src="{{ $productImageUrl }}"

@@ -70,7 +70,7 @@ class CatalogController extends Controller
     
     public function show($slug)
     {
-        $product = Product::with(['images', 'category.parent', 'inventory'])
+        $product = Product::with(['media', 'category.parent', 'inventory'])
             ->where('slug', $slug)
             ->active()
             ->firstOrFail(); 
