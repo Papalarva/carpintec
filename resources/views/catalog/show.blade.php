@@ -61,10 +61,10 @@
                             </div>
                         @endif
 
-                        <div class="flex-1 overflow-hidden rounded-2xl bg-gray-100 shadow-premium relative group">
+                        <div class="flex-1 overflow-hidden rounded-2xl bg-gradient-to-br from-gray-50 via-white to-gray-100 shadow-premium relative group border border-gray-100">
                             @if ($mainImage)
                                 <img :src="mainImage" alt="{{ $product->name }}"
-                                    class="h-full w-full object-cover object-center transition-transform duration-1000 ease-out group-hover:scale-105">
+                                    class="h-full w-full object-contain object-center p-4 md:p-6 transition-transform duration-700 ease-out group-hover:scale-[1.02]">
                             @else
                                 <div class="absolute inset-0 flex items-center justify-center text-gray-300">
                                     <svg class="h-32 w-32" fill="none" stroke="currentColor" viewBox="0 0 24 24"
